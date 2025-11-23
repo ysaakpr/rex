@@ -9,12 +9,10 @@ import (
 )
 
 type ECRRepositories struct {
-	APIRepo         *ecr.Repository
-	WorkerRepo      *ecr.Repository
-	FrontendRepo    *ecr.Repository
-	APIRepoURL      pulumi.StringOutput
-	WorkerRepoURL   pulumi.StringOutput
-	FrontendRepoURL pulumi.StringOutput
+	APIRepo       *ecr.Repository
+	WorkerRepo    *ecr.Repository
+	APIRepoURL    pulumi.StringOutput
+	WorkerRepoURL pulumi.StringOutput
 }
 
 func createECRRepositories(ctx *pulumi.Context, projectName, environment string, tags pulumi.StringMap) (*ECRRepositories, error) {
@@ -91,39 +89,12 @@ func createECRRepositories(ctx *pulumi.Context, projectName, environment string,
 		return nil, err
 	}
 
-	// Frontend Repository
-	frontendRepo, err := ecr.NewRepository(ctx, fmt.Sprintf("%s-%s-frontend", projectName, environment), &ecr.RepositoryArgs{
-		Name:               pulumi.String(fmt.Sprintf("%s-%s-frontend", projectName, environment)),
-		ImageTagMutability: pulumi.String("MUTABLE"),
-		ImageScanningConfiguration: &ecr.RepositoryImageScanningConfigurationArgs{
-			ScanOnPush: pulumi.Bool(true),
-		},
-		Tags: pulumi.StringMap{
-			"Name":        pulumi.String(fmt.Sprintf("%s-%s-frontend", projectName, environment)),
-			"Service":     pulumi.String("frontend"),
-			"Project":     tags["Project"],
-			"Environment": tags["Environment"],
-			"ManagedBy":   tags["ManagedBy"],
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = ecr.NewLifecyclePolicy(ctx, fmt.Sprintf("%s-%s-frontend-lifecycle", projectName, environment), &ecr.LifecyclePolicyArgs{
-		Repository: frontendRepo.Name,
-		Policy:     pulumi.String(string(lifecyclePolicyJSON)),
-	})
-	if err != nil {
-		return nil, err
-	}
+	// Note: Frontend repository removed - frontend is now deployed via AWS Amplify
 
 	return &ECRRepositories{
-		APIRepo:         apiRepo,
-		WorkerRepo:      workerRepo,
-		FrontendRepo:    frontendRepo,
-		APIRepoURL:      apiRepo.RepositoryUrl,
-		WorkerRepoURL:   workerRepo.RepositoryUrl,
-		FrontendRepoURL: frontendRepo.RepositoryUrl,
+		APIRepo:       apiRepo,
+		WorkerRepo:    workerRepo,
+		APIRepoURL:    apiRepo.RepositoryUrl,
+		WorkerRepoURL: workerRepo.RepositoryUrl,
 	}, nil
 }

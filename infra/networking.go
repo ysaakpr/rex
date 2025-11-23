@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws"
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ec2"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -47,7 +48,7 @@ func createNetworking(ctx *pulumi.Context, projectName, environment, vpcCidr str
 	}
 
 	// Get availability zones
-	azs, err := ec2.GetAvailabilityZones(ctx, &ec2.GetAvailabilityZonesArgs{
+	azs, err := aws.GetAvailabilityZones(ctx, &aws.GetAvailabilityZonesArgs{
 		State: pulumi.StringRef("available"),
 	})
 	if err != nil {

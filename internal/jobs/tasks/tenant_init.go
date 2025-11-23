@@ -10,8 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/models"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/models"
 	"gorm.io/gorm"
 )
 

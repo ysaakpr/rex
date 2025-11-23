@@ -3,8 +3,8 @@ package services
 import (
 	"errors"
 
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/repository"
 )
 
 type PlatformAdminService interface {

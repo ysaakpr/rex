@@ -3,10 +3,10 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/vyshakhp/utm-backend/internal/api/middleware"
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/api/middleware"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/services"
 )
 
 type MemberHandler struct {

@@ -15,13 +15,13 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
-	"github.com/vyshakhp/utm-backend/internal/api/handlers"
-	"github.com/vyshakhp/utm-backend/internal/api/router"
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/database"
-	"github.com/vyshakhp/utm-backend/internal/jobs"
-	"github.com/vyshakhp/utm-backend/internal/repository"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/api/handlers"
+	"github.com/ysaakpr/rex/internal/api/router"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/database"
+	"github.com/ysaakpr/rex/internal/jobs"
+	"github.com/ysaakpr/rex/internal/repository"
+	"github.com/ysaakpr/rex/internal/services"
 	"go.uber.org/zap"
 )
 
@@ -82,7 +82,7 @@ func main() {
 	systemUserService := services.NewSystemUserService(systemUserRepo)
 
 	// Initialize handlers
-	tenantHandler := handlers.NewTenantHandler(tenantService)
+	tenantHandler := handlers.NewTenantHandler(tenantService, db)
 	memberHandler := handlers.NewMemberHandler(memberService)
 	invitationHandler := handlers.NewInvitationHandler(invitationService)
 	rbacHandler := handlers.NewRBACHandler(rbacService)

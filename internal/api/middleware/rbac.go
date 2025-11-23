@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/services"
 )
 
 // RequirePermission creates a middleware that checks if user has a specific permission

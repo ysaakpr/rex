@@ -9,9 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   const [members, setMembers] = useState([]);
-  const [relations, setRelations] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [userDetails, setUserDetails] = useState({}); // Map of userId -> user details
+  const [allUsers, setAllUsers] = useState([]); // All platform users for search
+  const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searchingUsers, setSearchingUsers] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [addMemberData, setAddMemberData] = useState({ userId: '', roleId: '' });
@@ -43,19 +46,19 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
         setMembers([]);
       }
 
-      // Load relations
-      const relationsResponse = await fetch(`/api/v1/relations`, {
+      // Load roles
+      const rolesResponse = await fetch(`/api/v1/roles`, {
         credentials: 'include'
       });
       
-      if (relationsResponse.ok) {
-        const relationsData = await relationsResponse.json();
-        console.log('[TenantUserManagement] Relations response:', relationsData);
-        const relationsArray = relationsData.data || [];
-        setRelations(Array.isArray(relationsArray) ? relationsArray : []);
+      if (rolesResponse.ok) {
+        const rolesData = await rolesResponse.json();
+        console.log('[TenantUserManagement] Roles response:', rolesData);
+        const rolesArray = rolesData.data || [];
+        setRoles(Array.isArray(rolesArray) ? rolesArray : []);
       } else {
-        console.error('[TenantUserManagement] Failed to load relations:', relationsResponse.status);
-        setRelations([]);
+        console.error('[TenantUserManagement] Failed to load roles:', rolesResponse.status);
+        setRoles([]);
       }
 
       // Load user details for all members
@@ -68,10 +71,49 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
     } catch (err) {
       console.error('[TenantUserManagement] Error loading data:', err);
       setMembers([]);
-      setRelations([]);
+      setRoles([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const searchUsers = async (query) => {
+    if (!query || query.length < 2) {
+      setAllUsers([]);
+      return;
+    }
+
+    try {
+      setSearchingUsers(true);
+      const response = await fetch(`/api/v1/users/search?q=${encodeURIComponent(query)}`, {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[TenantUserManagement] User search response:', data);
+        setAllUsers(data.data || []);
+      } else {
+        console.error('[TenantUserManagement] Failed to search users:', response.status);
+        setAllUsers([]);
+      }
+    } catch (err) {
+      console.error('[TenantUserManagement] Error searching users:', err);
+      setAllUsers([]);
+    } finally {
+      setSearchingUsers(false);
+    }
+  };
+
+  const handleUserSearchChange = (query) => {
+    setUserSearchQuery(query);
+    searchUsers(query);
+  };
+
+  const selectUser = (user) => {
+    setAddMemberData(prev => ({ ...prev, userId: user.id }));
+    setUserSearchQuery(`${user.name || user.email} (${user.email})`);
+    setAllUsers([]);
   };
 
   const fetchUserDetails = async (userIds) => {
@@ -275,10 +317,10 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
                           </button>
                         </div>
                         
-                        {/* Relation badge */}
+                        {/* Role badge */}
                         <div className="mt-2">
                           <Badge variant="secondary" className="text-xs">
-                            {member.relation?.name || 'Member'}
+                            {member.role?.name || 'Member'}
                           </Badge>
                         </div>
                       </div>
@@ -311,46 +353,90 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
       </Card>
 
       {/* Add Member Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent onClose={() => setShowAddDialog(false)}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => {
+        setShowAddDialog(open);
+        if (!open) {
+          setUserSearchQuery('');
+          setAllUsers([]);
+          setAddMemberData({ userId: '', roleId: '' });
+        }
+      }}>
+        <DialogContent onClose={() => {
+          setShowAddDialog(false);
+          setUserSearchQuery('');
+          setAllUsers([]);
+          setAddMemberData({ userId: '', roleId: '' });
+        }}>
           <DialogHeader>
             <DialogTitle>Add Member</DialogTitle>
             <DialogDescription>
-              Add an existing user to this tenant by their User ID
+              Search for an existing user and assign them a role
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="userId">User ID</Label>
-              <Input
-                id="userId"
-                placeholder="e.g., 04413f25-fdfa-..."
-                value={addMemberData.userId}
-                onChange={(e) => setAddMemberData(prev => ({ ...prev, userId: e.target.value }))}
-              />
+              <Label htmlFor="userSearch">Search User</Label>
+              <div className="relative">
+                <Input
+                  id="userSearch"
+                  placeholder="Search by name or email..."
+                  value={userSearchQuery}
+                  onChange={(e) => handleUserSearchChange(e.target.value)}
+                  autoComplete="off"
+                />
+                {searchingUsers && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  </div>
+                )}
+                {allUsers.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 max-h-60 overflow-auto bg-background border rounded-md shadow-lg">
+                    {allUsers.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => selectUser(user)}
+                        className="w-full text-left px-4 py-3 hover:bg-muted border-b last:border-b-0 transition-colors"
+                      >
+                        <div className="font-medium text-sm">{user.name || 'No name'}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {addMemberData.userId && (
+                <p className="text-xs text-muted-foreground">
+                  Selected user ID: {addMemberData.userId}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="roleId">Relation/Role</Label>
+              <Label htmlFor="roleId">Role</Label>
               <select
                 id="roleId"
                 value={addMemberData.roleId}
                 onChange={(e) => setAddMemberData(prev => ({ ...prev, roleId: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <option value="">Select a relation</option>
-                {relations.map(relation => (
-                  <option key={relation.id} value={relation.id}>
-                    {relation.name}
+                <option value="">Select a role</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
                   </option>
                 ))}
               </select>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowAddDialog(false);
+              setUserSearchQuery('');
+              setAllUsers([]);
+              setAddMemberData({ userId: '', roleId: '' });
+            }}>
               Cancel
             </Button>
-            <Button onClick={handleAddMember}>
+            <Button onClick={handleAddMember} disabled={!addMemberData.userId || !addMemberData.roleId}>
               Add Member
             </Button>
           </DialogFooter>
@@ -378,17 +464,17 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="inviteRelationId">Relation/Role</Label>
+              <Label htmlFor="inviteRoleId">Role</Label>
               <select
-                id="inviteRelationId"
+                id="inviteRoleId"
                 value={inviteData.roleId}
                 onChange={(e) => setInviteData(prev => ({ ...prev, roleId: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                <option value="">Select a relation</option>
-                {relations.map(relation => (
-                  <option key={relation.id} value={relation.id}>
-                    {relation.name}
+                <option value="">Select a role</option>
+                {roles.map(role => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
                   </option>
                 ))}
               </select>

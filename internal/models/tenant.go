@@ -45,14 +45,15 @@ type UpdateTenantInput struct {
 }
 
 type TenantResponse struct {
-	ID        uuid.UUID    `json:"id"`
-	Name      string       `json:"name"`
-	Slug      string       `json:"slug"`
-	Status    TenantStatus `json:"status"`
-	Metadata  JSONMap      `json:"metadata"`
-	CreatedBy string       `json:"created_by"`
-	CreatedAt time.Time    `json:"created_at"`
-	UpdatedAt time.Time    `json:"updated_at"`
+	ID          uuid.UUID    `json:"id"`
+	Name        string       `json:"name"`
+	Slug        string       `json:"slug"`
+	Status      TenantStatus `json:"status"`
+	Metadata    JSONMap      `json:"metadata"`
+	CreatedBy   string       `json:"created_by"`
+	MemberCount int          `json:"member_count"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   time.Time    `json:"updated_at"`
 }
 
 func (t *Tenant) ToResponse() *TenantResponse {

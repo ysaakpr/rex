@@ -1,6 +1,6 @@
-# UTM Backend - AWS Infrastructure with Pulumi
+# Rex Backend - AWS Infrastructure with Pulumi
 
-This directory contains the Pulumi infrastructure-as-code (IaC) for deploying the UTM Backend to AWS using Fargate.
+This directory contains the Pulumi infrastructure-as-code (IaC) for deploying the Rex Backend to AWS using Fargate.
 
 ## Architecture Overview
 
@@ -15,7 +15,7 @@ This directory contains the Pulumi infrastructure-as-code (IaC) for deploying th
 2. **Database**
    - Aurora RDS Serverless v2 (PostgreSQL 15.4)
    - Two databases in a single cluster:
-     - `utm_backend` - Main application database
+     - `rex_backend` - Main application database
      - `supertokens` - SuperTokens authentication database
    - Auto-scaling from 0.5 to 2 ACUs
    - Automated backups with 7-day retention
@@ -29,38 +29,45 @@ This directory contains the Pulumi infrastructure-as-code (IaC) for deploying th
    - ECR repositories for:
      - API service
      - Worker service
-     - Frontend application
    - Automated image scanning on push
    - Lifecycle policy to keep last 10 images
 
 5. **Compute (ECS Fargate)**
+   - **Fully managed Fargate** - No EC2 instances to manage
    - ECS Cluster with Container Insights enabled
    - Services:
      - **API**: 2 tasks (512 CPU, 1024 MB) - Go application
      - **Worker**: 1 task (512 CPU, 1024 MB) - Background jobs
-     - **Frontend**: 2 tasks (256 CPU, 512 MB) - React application
      - **SuperTokens**: 1 task (512 CPU, 1024 MB) - Authentication service
    - Service discovery for internal communication
    - Auto-restart on failure
 
-6. **Load Balancer**
-   - Application Load Balancer (ALB)
+6. **Frontend Hosting (AWS Amplify)**
+   - **AWS Amplify** for React SPA hosting
+   - Connected to GitHub repository for CI/CD
+   - Automatic builds on push
+   - Global CDN distribution
+   - Custom domain support
+   - Automatic SSL/TLS certificates
+
+7. **Load Balancer**
+   - Application Load Balancer (ALB) for backend services only
    - HTTP/HTTPS listeners
    - Path-based routing:
      - `/api/*` → API service
      - `/auth/*` → SuperTokens service
-     - `/*` → Frontend
-   - Health checks for all services
+   - Health checks for all backend services
 
-7. **Security**
+8. **Security**
    - AWS Secrets Manager for sensitive configuration
    - IAM roles with least privilege
    - Security groups with minimal required access
    - SSL/TLS for data in transit
 
-8. **Monitoring**
-   - CloudWatch Log Groups for all services
+9. **Monitoring**
+   - CloudWatch Log Groups for backend services
    - Container Insights enabled
+   - Amplify Console for frontend logs and build status
    - 7-day log retention (configurable)
 
 ## Prerequisites
@@ -121,16 +128,16 @@ Create an S3 bucket for Pulumi state:
 
 ```bash
 # Create S3 bucket for state
-aws s3 mb s3://utm-backend-pulumi-state --region us-east-1
+aws s3 mb s3://rex-backend-pulumi-state --region us-east-1
 
 # Enable versioning
 aws s3api put-bucket-versioning \
-  --bucket utm-backend-pulumi-state \
+  --bucket rex-backend-pulumi-state \
   --versioning-configuration Status=Enabled
 
 # Enable encryption
 aws s3api put-bucket-encryption \
-  --bucket utm-backend-pulumi-state \
+  --bucket rex-backend-pulumi-state \
   --server-side-encryption-configuration '{
     "Rules": [{
       "ApplyServerSideEncryptionByDefault": {
@@ -146,7 +153,7 @@ aws s3api put-bucket-encryption \
 cd infra
 
 # Login to S3 backend
-pulumi login s3://utm-backend-pulumi-state
+pulumi login s3://rex-backend-pulumi-state
 
 # Install Go dependencies
 go mod download
@@ -158,20 +165,27 @@ pulumi stack init dev
 pulumi config set aws:region us-east-1
 ```
 
-### 3. Configure Secrets
+### 3. Configure Required Settings
 
-Set required secrets:
+Set required configuration:
 
 ```bash
 # Database master password (generate a strong password)
-pulumi config set --secret utm-backend:dbMasterPassword "YourStrongPasswordHere123!"
+pulumi config set --secret rex-backend:dbMasterPassword "YourStrongPasswordHere123!"
 
 # SuperTokens API key (generate a strong random string)
-pulumi config set --secret utm-backend:supertokensApiKey "your-supertokens-api-key-here"
+pulumi config set --secret rex-backend:supertokensApiKey "your-supertokens-api-key-here"
 
-# Optional: Set custom domain and certificate
-# pulumi config set utm-backend:domainName "utm.example.com"
-# pulumi config set utm-backend:certificateArn "arn:aws:acm:us-east-1:123456789:certificate/abc-123"
+# GitHub repository for Amplify frontend deployment
+pulumi config set rex-backend:githubRepo "https://github.com/yourusername/rex-backend"
+pulumi config set rex-backend:githubBranch "main"
+
+# Optional: GitHub token for better rate limits (not required for public repos)
+# pulumi config set rex-backend:githubToken "ghp_your_github_token_here"
+
+# Optional: Set custom domain and certificate for backend API
+# pulumi config set rex-backend:domainName "api.example.com"
+# pulumi config set rex-backend:certificateArn "arn:aws:acm:us-east-1:123456789:certificate/abc-123"
 ```
 
 ### 4. Review Configuration
@@ -184,27 +198,28 @@ pulumi config
 # Should show:
 # KEY                                    VALUE
 # aws:region                             us-east-1
-# utm-backend:dbMasterPassword           [secret]
-# utm-backend:environment                dev
-# utm-backend:projectName                utm-backend
-# utm-backend:supertokensApiKey          [secret]
-# utm-backend:vpcCidr                    10.0.0.0/16
+# rex-backend:dbMasterPassword           [secret]
+# rex-backend:environment                dev
+# rex-backend:projectName                rex-backend
+# rex-backend:supertokensApiKey          [secret]
+# rex-backend:vpcCidr                    10.0.0.0/16
 ```
 
 ## Deployment Process
 
 ### Step 1: Build and Push Docker Images
 
-Before deploying infrastructure, build and push your Docker images to ECR.
+Before deploying infrastructure, build and push backend Docker images to ECR.
+
+**Note**: Frontend is now deployed via AWS Amplify directly from GitHub, so no frontend Docker image is needed!
 
 ```bash
 # From project root
-cd /path/to/utm-backend
+cd /path/to/rex-backend
 
-# Build production images
-docker build -f Dockerfile.prod --target api -t utm-backend-api:latest .
-docker build -f Dockerfile.prod --target worker -t utm-backend-worker:latest .
-docker build -f frontend/Dockerfile.prod -t utm-backend-frontend:latest .
+# Build production images for backend services only
+docker build -f Dockerfile.prod --target api -t rex-backend-api:latest .
+docker build -f Dockerfile.prod --target worker -t rex-backend-worker:latest .
 
 # After Pulumi creates ECR repositories, tag and push:
 # (ECR URLs will be in Pulumi outputs)
@@ -214,14 +229,12 @@ aws ecr get-login-password --region us-east-1 | \
   docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
 
 # Tag images
-docker tag utm-backend-api:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-api:latest
-docker tag utm-backend-worker:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-worker:latest
-docker tag utm-backend-frontend:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-frontend:latest
+docker tag rex-backend-api:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-api:latest
+docker tag rex-backend-worker:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-worker:latest
 
 # Push images
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-api:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-worker:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/utm-backend-dev-frontend:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-api:latest
+docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-worker:latest
 ```
 
 ### Step 2: Preview Infrastructure Changes
@@ -261,7 +274,7 @@ aws ecs run-task \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNET_1,$SUBNET_2],securityGroups=[$SECURITY_GROUP],assignPublicIp=DISABLED}"
 
 # Monitor logs
-aws logs tail /ecs/utm-backend-dev-migration --follow
+aws logs tail /ecs/rex-backend-dev-migration --follow
 ```
 
 ### Step 5: Create SuperTokens Database
@@ -277,39 +290,59 @@ DB_ENDPOINT=$(pulumi stack output rdsClusterEndpoint)
 # Option 2: Use AWS Systems Manager Session Manager
 
 # Create supertokens database
-psql -h $DB_ENDPOINT -U utmadmin -d utm_backend -c "CREATE DATABASE supertokens;"
+psql -h $DB_ENDPOINT -U rexadmin -d rex_backend -c "CREATE DATABASE supertokens;"
 ```
 
 ### Step 6: Verify Deployment
 
 ```bash
-# Get ALB DNS name
+# Get output URLs
 ALB_DNS=$(pulumi stack output albDnsName)
+FRONTEND_URL=$(pulumi stack output frontendUrl)
 
 # Test API health
 curl http://$ALB_DNS/api/health
 
-# Test frontend
-curl http://$ALB_DNS/
-
 # Test SuperTokens
 curl http://$ALB_DNS/auth/hello
+
+# Test frontend (open in browser)
+echo "Frontend URL: $FRONTEND_URL"
+open $FRONTEND_URL  # macOS
+# Or visit the URL in your browser
 ```
+
+**Frontend Deployment**: 
+- Amplify will automatically build and deploy your frontend when you push to GitHub
+- Check build status in AWS Console → Amplify → Your App
+- Frontend URL will be in the format: `https://main.xxxxx.amplifyapp.com`
 
 ## Updating the Stack
 
 ### Update Application Code
 
+**Backend Services**:
 1. Build new Docker images with updated code
 2. Tag with a new version or `latest`
 3. Push to ECR
 4. Force new deployment:
 
 ```bash
-# Force new deployment of services
-aws ecs update-service --cluster utm-backend-dev-cluster --service utm-backend-dev-api --force-new-deployment
-aws ecs update-service --cluster utm-backend-dev-cluster --service utm-backend-dev-worker --force-new-deployment
-aws ecs update-service --cluster utm-backend-dev-cluster --service utm-backend-dev-frontend --force-new-deployment
+# Force new deployment of backend services
+aws ecs update-service --cluster rex-backend-dev-cluster --service rex-backend-dev-api --force-new-deployment
+aws ecs update-service --cluster rex-backend-dev-cluster --service rex-backend-dev-worker --force-new-deployment
+aws ecs update-service --cluster rex-backend-dev-cluster --service rex-backend-dev-supertokens --force-new-deployment
+```
+
+**Frontend**:
+- Simply push to GitHub - Amplify will automatically build and deploy
+- No manual steps required!
+
+```bash
+git add .
+git commit -m "Update frontend"
+git push origin main
+# Amplify automatically builds and deploys
 ```
 
 ### Update Infrastructure
@@ -357,7 +390,7 @@ Add Application Auto Scaling (future enhancement):
 aws application-autoscaling register-scalable-target \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/utm-backend-dev-cluster/utm-backend-dev-api \
+  --resource-id service/rex-backend-dev-cluster/rex-backend-dev-api \
   --min-capacity 2 \
   --max-capacity 10
 
@@ -365,7 +398,7 @@ aws application-autoscaling register-scalable-target \
 aws application-autoscaling put-scaling-policy \
   --service-namespace ecs \
   --scalable-dimension ecs:service:DesiredCount \
-  --resource-id service/utm-backend-dev-cluster/utm-backend-dev-api \
+  --resource-id service/rex-backend-dev-cluster/rex-backend-dev-api \
   --policy-name cpu-scaling \
   --policy-type TargetTrackingScaling \
   --target-tracking-scaling-policy-configuration file://scaling-policy.json
@@ -375,16 +408,22 @@ aws application-autoscaling put-scaling-policy \
 
 ### View Logs
 
+**Backend Logs** (CloudWatch):
 ```bash
 # API logs
-aws logs tail /ecs/utm-backend-dev-api --follow
+aws logs tail /ecs/rex-backend-dev-api --follow
 
 # Worker logs
-aws logs tail /ecs/utm-backend-dev-worker --follow
+aws logs tail /ecs/rex-backend-dev-worker --follow
 
-# Frontend logs
-aws logs tail /ecs/utm-backend-dev-frontend --follow
+# SuperTokens logs
+aws logs tail /ecs/rex-backend-dev-supertokens --follow
 ```
+
+**Frontend Logs** (Amplify Console):
+- Go to AWS Console → Amplify → Your App
+- View build logs and deployment history
+- Access logs show HTTP requests
 
 ### CloudWatch Metrics
 
@@ -419,11 +458,14 @@ Create CloudWatch Alarms for:
 
 - **Aurora Serverless v2**: ~$30-50 (minimal usage)
 - **ElastiCache (t4g.micro)**: ~$12
-- **ECS Fargate**: ~$40-60 (4 tasks total)
+- **ECS Fargate**: ~$30-40 (3 backend tasks, no frontend)
+- **AWS Amplify**: ~$0-5 (build minutes + hosting for 1 app)
 - **NAT Gateway**: ~$33 (with data transfer)
 - **ALB**: ~$16
 - **CloudWatch Logs**: ~$5
-- **Total**: ~$136-176/month
+- **Total**: ~$126-161/month
+
+**Cost Savings vs ECS Frontend**: ~$10-15/month by using Amplify instead of ECS Fargate for frontend
 
 ## Troubleshooting
 
@@ -437,7 +479,7 @@ Check:
 
 ```bash
 # View ECS task failures
-aws ecs describe-tasks --cluster utm-backend-dev-cluster --tasks <task-arn>
+aws ecs describe-tasks --cluster rex-backend-dev-cluster --tasks <task-arn>
 ```
 
 ### Database Connection Issues
@@ -466,7 +508,7 @@ Check:
 1. **Rotate Secrets Regularly**
 ```bash
 # Update database password
-pulumi config set --secret utm-backend:dbMasterPassword "NewPassword123!"
+pulumi config set --secret rex-backend:dbMasterPassword "NewPassword123!"
 pulumi up
 ```
 

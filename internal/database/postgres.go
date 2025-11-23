@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/vyshakhp/utm-backend/internal/config"
+	"github.com/ysaakpr/rex/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

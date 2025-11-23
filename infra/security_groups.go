@@ -108,10 +108,10 @@ func createSecurityGroups(ctx *pulumi.Context, projectName, environment string, 
 		Description: pulumi.String("Security group for RDS Aurora"),
 		Ingress: ec2.SecurityGroupIngressArray{
 			&ec2.SecurityGroupIngressArgs{
-				Protocol:              pulumi.String("tcp"),
-				FromPort:              pulumi.Int(5432),
-				ToPort:                pulumi.Int(5432),
-				SourceSecurityGroupId: ecsSG.ID(),
+				Protocol:       pulumi.String("tcp"),
+				FromPort:       pulumi.Int(5432),
+				ToPort:         pulumi.Int(5432),
+				SecurityGroups: pulumi.StringArray{ecsSG.ID().ToStringOutput()},
 			},
 		},
 		Egress: ec2.SecurityGroupEgressArray{
@@ -139,10 +139,10 @@ func createSecurityGroups(ctx *pulumi.Context, projectName, environment string, 
 		Description: pulumi.String("Security group for ElastiCache Redis"),
 		Ingress: ec2.SecurityGroupIngressArray{
 			&ec2.SecurityGroupIngressArgs{
-				Protocol:              pulumi.String("tcp"),
-				FromPort:              pulumi.Int(6379),
-				ToPort:                pulumi.Int(6379),
-				SourceSecurityGroupId: ecsSG.ID(),
+				Protocol:       pulumi.String("tcp"),
+				FromPort:       pulumi.Int(6379),
+				ToPort:         pulumi.Int(6379),
+				SecurityGroups: pulumi.StringArray{ecsSG.ID().ToStringOutput()},
 			},
 		},
 		Egress: ec2.SecurityGroupEgressArray{
@@ -170,10 +170,10 @@ func createSecurityGroups(ctx *pulumi.Context, projectName, environment string, 
 		Description: pulumi.String("Security group for SuperTokens service"),
 		Ingress: ec2.SecurityGroupIngressArray{
 			&ec2.SecurityGroupIngressArgs{
-				Protocol:              pulumi.String("tcp"),
-				FromPort:              pulumi.Int(3567),
-				ToPort:                pulumi.Int(3567),
-				SourceSecurityGroupId: ecsSG.ID(),
+				Protocol:       pulumi.String("tcp"),
+				FromPort:       pulumi.Int(3567),
+				ToPort:         pulumi.Int(3567),
+				SecurityGroups: pulumi.StringArray{ecsSG.ID().ToStringOutput()},
 			},
 		},
 		Egress: ec2.SecurityGroupEgressArray{

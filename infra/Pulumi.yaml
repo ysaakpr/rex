@@ -1,41 +1,50 @@
-name: utm-backend
+name: rex-backend
 runtime: go
-description: UTM Backend Infrastructure on AWS
+description: Rex Backend Infrastructure on AWS
 
 config:
-  aws:region:
-    description: AWS region
-    default: us-east-1
-  
-  utm-backend:projectName:
+  rex-backend:projectName:
     description: Project name used for resource naming
-    default: utm-backend
+    default: rex-backend
   
-  utm-backend:environment:
+  rex-backend:environment:
     description: Environment (dev, staging, production)
     default: dev
   
-  utm-backend:vpcCidr:
+  rex-backend:vpcCidr:
     description: VPC CIDR block
-    default: 10.0.0.0/16
+    default: 172.31.0.0/16
+
   
-  utm-backend:dbMasterUsername:
+  rex-backend:dbMasterUsername:
     description: Database master username
-    default: utmadmin
+    default: rexadmin
   
-  utm-backend:dbMasterPassword:
+  rex-backend:dbMasterPassword:
     description: Database master password
     secret: true
   
-  utm-backend:supertokensApiKey:
+  rex-backend:supertokensApiKey:
     description: SuperTokens API key
     secret: true
   
-  utm-backend:domainName:
+  rex-backend:domainName:
     description: Domain name for the application (optional)
     default: ""
   
-  utm-backend:certificateArn:
+  rex-backend:certificateArn:
     description: ACM certificate ARN for HTTPS (optional)
+    default: ""
+  
+  rex-backend:githubRepo:
+    description: GitHub repository URL for Amplify frontend deployment
+    default: https://github.com/ysaakpr/rex
+  
+  rex-backend:githubBranch:
+    description: GitHub branch to deploy (main, develop, etc.)
+    default: main
+  
+  rex-backend:githubToken:
+    description: GitHub personal access token (optional for public repos)
     default: ""
 

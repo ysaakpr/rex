@@ -81,7 +81,7 @@ else
     echo -e "${RED}Error: Migration failed with exit code $EXIT_CODE${NC}"
     echo ""
     echo "View logs with:"
-    echo "  aws logs tail /ecs/$(pulumi config get utm-backend:projectName)-$(pulumi config get utm-backend:environment)-migration --follow"
+    echo "  aws logs tail /ecs/$(pulumi config get rex-backend:projectName)-$(pulumi config get rex-backend:environment)-migration --follow"
     exit 1
 fi
 

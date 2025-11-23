@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/database"
-	"github.com/vyshakhp/utm-backend/internal/jobs"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/database"
+	"github.com/ysaakpr/rex/internal/jobs"
 	"go.uber.org/zap"
 )
 

@@ -2,10 +2,10 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/vyshakhp/utm-backend/internal/api/handlers"
-	"github.com/vyshakhp/utm-backend/internal/api/middleware"
-	"github.com/vyshakhp/utm-backend/internal/repository"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/api/handlers"
+	"github.com/ysaakpr/rex/internal/api/middleware"
+	"github.com/ysaakpr/rex/internal/repository"
+	"github.com/ysaakpr/rex/internal/services"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -93,6 +93,7 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 			users := auth.Group("/users")
 			{
 				users.GET("", deps.UserHandler.ListUsers)
+				users.GET("/search", deps.UserHandler.SearchUsers)
 				users.GET("/:user_id", deps.UserHandler.GetUserDetails)
 				users.GET("/:user_id/tenants", deps.UserHandler.GetUserTenants)
 				users.POST("/batch", deps.UserHandler.GetBatchUserDetails)

@@ -3,19 +3,22 @@ package handlers
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/vyshakhp/utm-backend/internal/api/middleware"
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/api/middleware"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/services"
+	"gorm.io/gorm"
 )
 
 type TenantHandler struct {
 	tenantService services.TenantService
+	db            *gorm.DB
 }
 
-func NewTenantHandler(tenantService services.TenantService) *TenantHandler {
+func NewTenantHandler(tenantService services.TenantService, db *gorm.DB) *TenantHandler {
 	return &TenantHandler{
 		tenantService: tenantService,
+		db:            db,
 	}
 }
 
@@ -46,7 +49,11 @@ func (h *TenantHandler) CreateTenant(c *gin.Context) {
 		return
 	}
 
-	response.Created(c, "Tenant created successfully", tenant.ToResponse())
+	tenantResp := tenant.ToResponse()
+	// Creator is automatically added as a member
+	tenantResp.MemberCount = 1
+
+	response.Created(c, "Tenant created successfully", tenantResp)
 }
 
 // CreateManagedTenant godoc
@@ -80,7 +87,11 @@ func (h *TenantHandler) CreateManagedTenant(c *gin.Context) {
 		return
 	}
 
-	response.Created(c, "Managed tenant created successfully", tenant.ToResponse())
+	tenantResp := tenant.ToResponse()
+	// Admin will be added as a member when they accept the invitation
+	tenantResp.MemberCount = 0
+
+	response.Created(c, "Managed tenant created successfully", tenantResp)
 }
 
 // GetTenant godoc
@@ -104,7 +115,18 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, tenant.ToResponse())
+	tenantResp := tenant.ToResponse()
+
+	// Count active members for this tenant
+	var memberCount int64
+	h.db.Table("tenant_members").
+		Where("tenant_id = ?", tenant.ID).
+		Where("status = ?", "active").
+		Count(&memberCount)
+
+	tenantResp.MemberCount = int(memberCount)
+
+	response.OK(c, tenantResp)
 }
 
 // ListTenants godoc
@@ -134,10 +156,20 @@ func (h *TenantHandler) ListTenants(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
+	// Convert to response format and add member counts
 	tenantResponses := make([]*models.TenantResponse, len(tenants))
 	for i, tenant := range tenants {
-		tenantResponses[i] = tenant.ToResponse()
+		tenantResp := tenant.ToResponse()
+
+		// Count active members for this tenant
+		var memberCount int64
+		h.db.Table("tenant_members").
+			Where("tenant_id = ?", tenant.ID).
+			Where("status = ?", "active").
+			Count(&memberCount)
+
+		tenantResp.MemberCount = int(memberCount)
+		tenantResponses[i] = tenantResp
 	}
 
 	pagination.Normalize()
@@ -186,7 +218,18 @@ func (h *TenantHandler) UpdateTenant(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, tenant.ToResponse())
+	tenantResp := tenant.ToResponse()
+
+	// Count active members for this tenant
+	var memberCount int64
+	h.db.Table("tenant_members").
+		Where("tenant_id = ?", tenant.ID).
+		Where("status = ?", "active").
+		Count(&memberCount)
+
+	tenantResp.MemberCount = int(memberCount)
+
+	response.OK(c, tenantResp)
 }
 
 // DeleteTenant godoc

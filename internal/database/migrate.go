@@ -6,7 +6,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/vyshakhp/utm-backend/internal/config"
+	"github.com/ysaakpr/rex/internal/config"
 )
 
 func RunMigrations(cfg *config.Config) error {

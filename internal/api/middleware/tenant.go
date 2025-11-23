@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
-	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/ysaakpr/rex/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/repository"
 )
 
 // TenantAccessMiddleware validates that the user has access to the tenant

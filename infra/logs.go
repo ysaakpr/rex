@@ -10,7 +10,6 @@ import (
 type LogGroups struct {
 	APILogGroup         *cloudwatch.LogGroup
 	WorkerLogGroup      *cloudwatch.LogGroup
-	FrontendLogGroup    *cloudwatch.LogGroup
 	SuperTokensLogGroup *cloudwatch.LogGroup
 	MigrationLogGroup   *cloudwatch.LogGroup
 }
@@ -48,21 +47,8 @@ func createLogGroups(ctx *pulumi.Context, projectName, environment string, tags 
 		return nil, err
 	}
 
-	// Frontend Log Group
-	frontendLogGroup, err := cloudwatch.NewLogGroup(ctx, fmt.Sprintf("%s-%s-frontend-logs", projectName, environment), &cloudwatch.LogGroupArgs{
-		Name:            pulumi.String(fmt.Sprintf("/ecs/%s-%s-frontend", projectName, environment)),
-		RetentionInDays: pulumi.Int(7),
-		Tags: pulumi.StringMap{
-			"Name":        pulumi.String(fmt.Sprintf("%s-%s-frontend-logs", projectName, environment)),
-			"Service":     pulumi.String("frontend"),
-			"Project":     tags["Project"],
-			"Environment": tags["Environment"],
-			"ManagedBy":   tags["ManagedBy"],
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+	// Note: Frontend log group removed - frontend is now deployed via AWS Amplify
+	// Amplify has its own logging in the Amplify console
 
 	// SuperTokens Log Group
 	supertokensLogGroup, err := cloudwatch.NewLogGroup(ctx, fmt.Sprintf("%s-%s-supertokens-logs", projectName, environment), &cloudwatch.LogGroupArgs{
@@ -99,7 +85,6 @@ func createLogGroups(ctx *pulumi.Context, projectName, environment string, tags 
 	return &LogGroups{
 		APILogGroup:         apiLogGroup,
 		WorkerLogGroup:      workerLogGroup,
-		FrontendLogGroup:    frontendLogGroup,
 		SuperTokensLogGroup: supertokensLogGroup,
 		MigrationLogGroup:   migrationLogGroup,
 	}, nil

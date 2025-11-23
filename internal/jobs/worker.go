@@ -9,8 +9,8 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/jobs/tasks"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/jobs/tasks"
 )
 
 type Worker struct {

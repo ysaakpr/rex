@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vyshakhp/utm-backend/internal/jobs"
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/ysaakpr/rex/internal/jobs"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/repository"
 	"gorm.io/gorm"
 )
 
@@ -125,13 +125,13 @@ func (s *tenantService) CreateManagedTenant(input *models.CreateTenantInput, adm
 	// Create invitation for the admin user
 	invitationToken := generateInvitationToken()
 	invitation := &models.UserInvitation{
-		TenantID:   tenant.ID,
+		TenantID:  tenant.ID,
 		Email:     adminEmail,
 		InvitedBy: creatorID,
 		RoleID:    adminRole.ID,
 		Token:     invitationToken,
 		Status:    models.InvitationStatusPending,
-		ExpiresAt:  time.Now().Add(72 * time.Hour),
+		ExpiresAt: time.Now().Add(72 * time.Hour),
 	}
 
 	if err := s.invitationRepo.Create(invitation); err != nil {

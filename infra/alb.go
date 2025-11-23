@@ -10,7 +10,6 @@ import (
 type ALBResources struct {
 	ALB                    *lb.LoadBalancer
 	APITargetGroup         *lb.TargetGroup
-	FrontendTargetGroup    *lb.TargetGroup
 	SuperTokensTargetGroup *lb.TargetGroup
 	HTTPListener           *lb.Listener
 	HTTPSListener          *lb.Listener
@@ -69,33 +68,8 @@ func createLoadBalancer(ctx *pulumi.Context, projectName, environment string, ne
 		return nil, err
 	}
 
-	frontendTargetGroup, err := lb.NewTargetGroup(ctx, fmt.Sprintf("%s-%s-frontend-tg", projectName, environment), &lb.TargetGroupArgs{
-		Name:       pulumi.String(fmt.Sprintf("%s-%s-frontend-tg", projectName, environment)),
-		Port:       pulumi.Int(3000),
-		Protocol:   pulumi.String("HTTP"),
-		VpcId:      network.VpcID.ToStringOutput(),
-		TargetType: pulumi.String("ip"),
-		HealthCheck: &lb.TargetGroupHealthCheckArgs{
-			Enabled:            pulumi.Bool(true),
-			HealthyThreshold:   pulumi.Int(2),
-			UnhealthyThreshold: pulumi.Int(3),
-			Timeout:            pulumi.Int(5),
-			Interval:           pulumi.Int(30),
-			Path:               pulumi.String("/"),
-			Matcher:            pulumi.String("200"),
-		},
-		DeregistrationDelay: pulumi.Int(30),
-		Tags: pulumi.StringMap{
-			"Name":        pulumi.String(fmt.Sprintf("%s-%s-frontend-tg", projectName, environment)),
-			"Service":     pulumi.String("frontend"),
-			"Project":     tags["Project"],
-			"Environment": tags["Environment"],
-			"ManagedBy":   tags["ManagedBy"],
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
+	// Note: Frontend target group removed - frontend is now served via AWS Amplify
+	// ALB only handles backend API and auth routes
 
 	supertokensTargetGroup, err := lb.NewTargetGroup(ctx, fmt.Sprintf("%s-%s-supertokens-tg", projectName, environment), &lb.TargetGroupArgs{
 		Name:       pulumi.String(fmt.Sprintf("%s-%s-st-tg", projectName, environment)),
@@ -126,14 +100,19 @@ func createLoadBalancer(ctx *pulumi.Context, projectName, environment string, ne
 	}
 
 	// Create HTTP Listener (always)
+	// Default action returns fixed response since frontend is on Amplify
 	httpListener, err := lb.NewListener(ctx, fmt.Sprintf("%s-%s-http-listener", projectName, environment), &lb.ListenerArgs{
 		LoadBalancerArn: alb.Arn,
 		Port:            pulumi.Int(80),
 		Protocol:        pulumi.String("HTTP"),
 		DefaultActions: lb.ListenerDefaultActionArray{
 			&lb.ListenerDefaultActionArgs{
-				Type:           pulumi.String("forward"),
-				TargetGroupArn: frontendTargetGroup.Arn,
+				Type: pulumi.String("fixed-response"),
+				FixedResponse: &lb.ListenerDefaultActionFixedResponseArgs{
+					ContentType: pulumi.String("text/plain"),
+					MessageBody: pulumi.String("Backend API - Use /api or /auth paths"),
+					StatusCode:  pulumi.String("200"),
+				},
 			},
 		},
 	})
@@ -199,8 +178,12 @@ func createLoadBalancer(ctx *pulumi.Context, projectName, environment string, ne
 			CertificateArn:  pulumi.String(certificateArn),
 			DefaultActions: lb.ListenerDefaultActionArray{
 				&lb.ListenerDefaultActionArgs{
-					Type:           pulumi.String("forward"),
-					TargetGroupArn: frontendTargetGroup.Arn,
+					Type: pulumi.String("fixed-response"),
+					FixedResponse: &lb.ListenerDefaultActionFixedResponseArgs{
+						ContentType: pulumi.String("text/plain"),
+						MessageBody: pulumi.String("Backend API - Use /api or /auth paths"),
+						StatusCode:  pulumi.String("200"),
+					},
 				},
 			},
 		})
@@ -259,7 +242,6 @@ func createLoadBalancer(ctx *pulumi.Context, projectName, environment string, ne
 	return &ALBResources{
 		ALB:                    alb,
 		APITargetGroup:         apiTargetGroup,
-		FrontendTargetGroup:    frontendTargetGroup,
 		SuperTokensTargetGroup: supertokensTargetGroup,
 		HTTPListener:           httpListener,
 		HTTPSListener:          httpsListener,

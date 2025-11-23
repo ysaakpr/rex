@@ -13,8 +13,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"gorm.io/gorm"
 
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/repository"
 )
 
 type SystemUserService interface {

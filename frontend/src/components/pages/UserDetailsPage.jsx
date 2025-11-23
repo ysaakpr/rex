@@ -143,7 +143,7 @@ export function UserDetailsPage() {
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="tenants">
-            Tenants & Relations ({tenantMemberships.length})
+            Tenants ({tenantMemberships.length})
           </TabsTrigger>
         </TabsList>
 
@@ -294,23 +294,18 @@ export function UserDetailsPage() {
                           </div>
                           
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {/* Relation Badge */}
-                            <Badge variant="outline" className="gap-1">
-                              <User className="h-3 w-3" />
-                              {membership.relation_name || 'Member'}
-                            </Badge>
-                            
-                            {/* Roles Badges */}
-                            {membership.roles && membership.roles.length > 0 ? (
-                              membership.roles.map((role) => (
-                                <Badge key={role.id} variant="secondary" className="gap-1">
-                                  <Shield className="h-3 w-3" />
-                                  {role.name}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">No roles assigned</Badge>
+                            {/* Role Badge */}
+                            {membership.role_name && (
+                              <Badge variant="secondary" className="gap-1">
+                                <Shield className="h-3 w-3" />
+                                {membership.role_name}
+                              </Badge>
                             )}
+                            
+                            {/* Status Badge */}
+                            <Badge variant={membership.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                              {membership.status}
+                            </Badge>
                           </div>
                           
                           {membership.joined_at && (

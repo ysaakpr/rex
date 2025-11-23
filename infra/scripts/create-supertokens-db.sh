@@ -25,7 +25,7 @@ cd "$(dirname "$0")/.."
 echo -e "${YELLOW}Getting database configuration from Pulumi...${NC}"
 DB_ENDPOINT=$(pulumi stack output rdsClusterEndpoint)
 DB_SECRET_ARN=$(aws secretsmanager list-secrets \
-    --query "SecretList[?contains(Name, '$(pulumi config get utm-backend:projectName)-$(pulumi config get utm-backend:environment)-db-secret')].ARN | [0]" \
+    --query "SecretList[?contains(Name, '$(pulumi config get rex-backend:projectName)-$(pulumi config get rex-backend:environment)-db-secret')].ARN | [0]" \
     --output text)
 
 if [ -z "$DB_ENDPOINT" ] || [ -z "$DB_SECRET_ARN" ]; then

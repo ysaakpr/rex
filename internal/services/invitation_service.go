@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/jobs"
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/jobs"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/repository"
 	"gorm.io/gorm"
 )
 
@@ -85,13 +85,13 @@ func (s *invitationService) CreateInvitation(tenantID uuid.UUID, input *models.C
 
 	// Create invitation
 	invitation := &models.UserInvitation{
-		TenantID:   tenant.ID,
+		TenantID:  tenant.ID,
 		Email:     input.Email,
 		InvitedBy: invitedBy,
 		RoleID:    input.RoleID,
 		Token:     token,
 		Status:    models.InvitationStatusPending,
-		ExpiresAt:  time.Now().Add(s.cfg.GetInvitationExpiry()),
+		ExpiresAt: time.Now().Add(s.cfg.GetInvitationExpiry()),
 	}
 
 	if err := s.invitationRepo.Create(invitation); err != nil {
@@ -149,7 +149,7 @@ func (s *invitationService) AcceptInvitation(token string, userID string) (*mode
 		RoleID:    invitation.RoleID,
 		Status:    models.MemberStatusActive,
 		InvitedBy: &invitation.InvitedBy,
-		JoinedAt:   time.Now(),
+		JoinedAt:  time.Now(),
 	}
 
 	if err := s.memberRepo.Create(member); err != nil {

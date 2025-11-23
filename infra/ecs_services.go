@@ -12,11 +12,9 @@ import (
 type ECSServicesResources struct {
 	APIService             *ecs.Service
 	WorkerService          *ecs.Service
-	FrontendService        *ecs.Service
 	SuperTokensService     *ecs.Service
 	APIServiceName         pulumi.StringOutput
 	WorkerServiceName      pulumi.StringOutput
-	FrontendServiceName    pulumi.StringOutput
 	SuperTokensServiceName pulumi.StringOutput
 }
 
@@ -164,50 +162,15 @@ func createECSServices(ctx *pulumi.Context, projectName, environment string, clu
 		return nil, err
 	}
 
-	// Frontend Task Definition
-	frontendTaskDef, err := createFrontendTaskDefinition(ctx, projectName, environment, roles, logs, repositories, alb, tags)
-	if err != nil {
-		return nil, err
-	}
-
-	// Frontend Service
-	frontendService, err := ecs.NewService(ctx, fmt.Sprintf("%s-%s-frontend-service", projectName, environment), &ecs.ServiceArgs{
-		Name:           pulumi.String(fmt.Sprintf("%s-%s-frontend", projectName, environment)),
-		Cluster:        cluster.ClusterARN,
-		TaskDefinition: frontendTaskDef.Arn,
-		DesiredCount:   pulumi.Int(2), // 2 instances for HA
-		LaunchType:     pulumi.String("FARGATE"),
-		NetworkConfiguration: &ecs.ServiceNetworkConfigurationArgs{
-			Subnets:        network.PrivateSubnetIDs,
-			SecurityGroups: pulumi.StringArray{securityGroups.ECSSG.ID().ToStringOutput()},
-		},
-		LoadBalancers: ecs.ServiceLoadBalancerArray{
-			&ecs.ServiceLoadBalancerArgs{
-				TargetGroupArn: alb.FrontendTargetGroup.Arn,
-				ContainerName:  pulumi.String("frontend"),
-				ContainerPort:  pulumi.Int(3000),
-			},
-		},
-		Tags: pulumi.StringMap{
-			"Name":        pulumi.String(fmt.Sprintf("%s-%s-frontend-service", projectName, environment)),
-			"Service":     pulumi.String("frontend"),
-			"Project":     tags["Project"],
-			"Environment": tags["Environment"],
-			"ManagedBy":   tags["ManagedBy"],
-		},
-	}, pulumi.DependsOn([]pulumi.Resource{apiService, alb.HTTPListener}))
-	if err != nil {
-		return nil, err
-	}
+	// Note: Frontend is now deployed via AWS Amplify, not ECS
+	// See amplify.go for frontend deployment configuration
 
 	return &ECSServicesResources{
 		APIService:             apiService,
 		WorkerService:          workerService,
-		FrontendService:        frontendService,
 		SuperTokensService:     supertokensService,
 		APIServiceName:         apiService.Name,
 		WorkerServiceName:      workerService.Name,
-		FrontendServiceName:    frontendService.Name,
 		SuperTokensServiceName: supertokensService.Name,
 	}, nil
 }
@@ -451,64 +414,6 @@ func createWorkerTaskDefinition(ctx *pulumi.Context, projectName, environment st
 	})
 }
 
-func createFrontendTaskDefinition(ctx *pulumi.Context, projectName, environment string, roles *IAMRoles,
-	logs *LogGroups, repositories *ECRRepositories, alb *ALBResources, tags pulumi.StringMap) (*ecs.TaskDefinition, error) {
-
-	containerDef := pulumi.All(repositories.FrontendRepoURL, alb.DNSName, logs.FrontendLogGroup.Name).ApplyT(
-		func(args []interface{}) (string, error) {
-			imageURL := args[0].(string)
-			albDNS := args[1].(string)
-			logGroup := args[2].(string)
-
-			containers := []map[string]interface{}{
-				{
-					"name":  "frontend",
-					"image": fmt.Sprintf("%s:latest", imageURL),
-					"portMappings": []map[string]interface{}{
-						{
-							"containerPort": 3000,
-							"protocol":      "tcp",
-						},
-					},
-					"environment": []map[string]interface{}{
-						{"name": "NODE_ENV", "value": "production"},
-						{"name": "VITE_API_URL", "value": fmt.Sprintf("http://%s/api", albDNS)},
-						{"name": "VITE_AUTH_URL", "value": fmt.Sprintf("http://%s/auth", albDNS)},
-					},
-					"logConfiguration": map[string]interface{}{
-						"logDriver": "awslogs",
-						"options": map[string]interface{}{
-							"awslogs-group":         logGroup,
-							"awslogs-region":        "us-east-1",
-							"awslogs-stream-prefix": "frontend",
-						},
-					},
-				},
-			}
-
-			jsonData, err := json.Marshal(containers)
-			if err != nil {
-				return "", err
-			}
-			return string(jsonData), nil
-		},
-	).(pulumi.StringOutput)
-
-	return ecs.NewTaskDefinition(ctx, fmt.Sprintf("%s-%s-frontend-task", projectName, environment), &ecs.TaskDefinitionArgs{
-		Family:                  pulumi.String(fmt.Sprintf("%s-%s-frontend", projectName, environment)),
-		NetworkMode:             pulumi.String("awsvpc"),
-		RequiresCompatibilities: pulumi.StringArray{pulumi.String("FARGATE")},
-		Cpu:                     pulumi.String("256"),
-		Memory:                  pulumi.String("512"),
-		ExecutionRoleArn:        roles.TaskExecutionRoleArn,
-		TaskRoleArn:             roles.TaskRoleArn,
-		ContainerDefinitions:    containerDef,
-		Tags: pulumi.StringMap{
-			"Name":        pulumi.String(fmt.Sprintf("%s-%s-frontend-task", projectName, environment)),
-			"Service":     pulumi.String("frontend"),
-			"Project":     tags["Project"],
-			"Environment": tags["Environment"],
-			"ManagedBy":   tags["ManagedBy"],
-		},
-	})
-}
+// Frontend is now deployed via AWS Amplify instead of ECS
+// See amplify.go for frontend deployment configuration
+// This function has been removed as it's no longer needed

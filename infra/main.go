@@ -11,7 +11,7 @@ func main() {
 		cfg := config.New(ctx, "")
 		projectName := cfg.Get("projectName")
 		if projectName == "" {
-			projectName = "utm-backend"
+			projectName = "rex-backend"
 		}
 		environment := cfg.Get("environment")
 		if environment == "" {
@@ -28,11 +28,25 @@ func main() {
 
 		dbMasterUsername := cfg.Get("dbMasterUsername")
 		if dbMasterUsername == "" {
-			dbMasterUsername = "utmadmin"
+			dbMasterUsername = "rexadmin"
 		}
 
 		domainName := cfg.Get("domainName")
 		certificateArn := cfg.Get("certificateArn")
+
+		// GitHub configuration for Amplify
+		githubRepo := cfg.Get("githubRepo")
+		if githubRepo == "" {
+			githubRepo = "https://github.com/yourusername/rex-backend" // Update this with your actual repo
+		}
+		githubBranch := cfg.Get("githubBranch")
+		if githubBranch == "" {
+			githubBranch = "main"
+		}
+		githubToken := cfg.Get("githubToken")
+		if githubToken == "" {
+			githubToken = "" // Optional for public repos
+		}
 
 		// Tags to apply to all resources
 		tags := pulumi.StringMap{
@@ -101,9 +115,15 @@ func main() {
 			return err
 		}
 
-		// Create ECS Task Definitions and Services
+		// Create ECS Task Definitions and Services (backend only - no frontend)
 		services, err := createECSServices(ctx, projectName, environment, cluster, network, securityGroups,
 			alb, roles, logs, repositories, secrets, database, redis, supertokensApiKey, tags)
+		if err != nil {
+			return err
+		}
+
+		// Create Amplify App for Frontend
+		amplifyApp, err := createAmplifyApp(ctx, projectName, environment, alb, githubRepo, githubBranch, githubToken, tags)
 		if err != nil {
 			return err
 		}
@@ -128,17 +148,23 @@ func main() {
 		ctx.Export("ecsClusterArn", cluster.ClusterARN)
 		ctx.Export("apiServiceName", services.APIServiceName)
 		ctx.Export("workerServiceName", services.WorkerServiceName)
-		ctx.Export("frontendServiceName", services.FrontendServiceName)
 		ctx.Export("supertokensServiceName", services.SuperTokensServiceName)
 		ctx.Export("migrationTaskDefinitionArn", migrationTask.TaskDefinitionARN)
 		ctx.Export("apiRepositoryUrl", repositories.APIRepoURL)
 		ctx.Export("workerRepositoryUrl", repositories.WorkerRepoURL)
-		ctx.Export("frontendRepositoryUrl", repositories.FrontendRepoURL)
 
+		// Amplify exports
+		ctx.Export("amplifyAppId", amplifyApp.AppID)
+		ctx.Export("amplifyAppArn", amplifyApp.AppARN)
+		ctx.Export("amplifyDefaultDomain", amplifyApp.DefaultDomain)
+		ctx.Export("amplifyBranchUrl", amplifyApp.BranchURL)
+		ctx.Export("frontendUrl", amplifyApp.BranchURL)
+
+		// API URL for reference
 		if domainName != "" {
-			ctx.Export("applicationUrl", pulumi.Sprintf("https://%s", domainName))
+			ctx.Export("apiUrl", pulumi.Sprintf("https://%s/api", domainName))
 		} else {
-			ctx.Export("applicationUrl", pulumi.Sprintf("http://%s", alb.DNSName))
+			ctx.Export("apiUrl", pulumi.Sprintf("http://%s/api", alb.DNSName))
 		}
 
 		return nil

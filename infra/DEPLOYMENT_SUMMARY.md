@@ -144,7 +144,7 @@ When you run `pulumi up`, it creates:
 - ✅ 1 DB Subnet Group
 - ✅ 1 ElastiCache Replication Group
 - ✅ 1 ElastiCache Subnet Group
-- ✅ 2 Databases (utm_backend, supertokens)
+- ✅ 2 Databases (rex_backend, supertokens)
 
 #### Container Infrastructure (9 resources)
 - ✅ 3 ECR Repositories (API, Worker, Frontend)
@@ -201,7 +201,7 @@ Internet
    │
    └─── Data Layer
         ├─── Aurora RDS Serverless v2 (PostgreSQL)
-        │    ├─── utm_backend database
+        │    ├─── rex_backend database
         │    └─── supertokens database
         └─── ElastiCache Redis
              ├─── Caching
@@ -298,7 +298,7 @@ curl http://$ALB_DNS/api/health
 ## File Structure
 
 ```
-utm-backend/
+rex-backend/
 ├── infra/                          # Infrastructure as Code
 │   ├── *.go                        # Pulumi modules (13 files)
 │   ├── Pulumi.yaml                 # Project config

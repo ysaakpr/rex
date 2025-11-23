@@ -1,9 +1,22 @@
 config:
-  aws:region: us-east-1
-  utm-backend:environment: dev
-  utm-backend:projectName: utm-backend
-  utm-backend:vpcCidr: 10.0.0.0/16
-  utm-backend:dbMasterUsername: utmadmin
-  # Set these via: pulumi config set --secret utm-backend:dbMasterPassword <password>
-  # pulumi config set --secret utm-backend:supertokensApiKey <api-key>
+  aws:region: ap-south-1
+  rex-backend:environment: dev
+  rex-backend:projectName: rex-backend
+  rex-backend:vpcCidr: 172.31.0.0/16
+  rex-backend:dbMasterUsername: rexadmin
+  # GitHub configuration for AWS Amplify frontend deployment
+  rex-backend:githubRepo: https://github.com/ysaakpr/rex
+  rex-backend:githubBranch: main
+  # Optional: GitHub token for better rate limits (not required for public repos)
+  # rex-backend:githubToken: <github-personal-access-token>
 
+  # Secrets (encrypted)
+  rex-backend:dbMasterPassword:
+    secure: v1:UoR2ZVWUWSRvjw5t:WaXkfFfZUN4WQUUUaszZdmlF/N9GjbBfhIwW9uHH0dQ3JijmQCc+rpc=
+  rex-backend:supertokensApiKey:
+    secure: v1:4XHgse5Yolcke7d5:fKnSv5LYd096hFh5k9Mmub8DHFzkoAR5K82FQmzXi+fwHfRsnm0bcK56pbh2
+encryptionsalt: v1:keJs8gf5Kek=:v1:OHar0IEijF+PV7Qr:9w/v4Ey19ZlttZ6rs658W44/ShcWCA==
+
+# Set these secrets via:
+# pulumi config set --secret rex-backend:dbMasterPassword <password>
+# pulumi config set --secret rex-backend:supertokensApiKey <api-key>

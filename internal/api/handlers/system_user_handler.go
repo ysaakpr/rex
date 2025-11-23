@@ -9,9 +9,9 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"go.uber.org/zap"
 
-	"github.com/vyshakhp/utm-backend/internal/models"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
-	"github.com/vyshakhp/utm-backend/internal/services"
+	"github.com/ysaakpr/rex/internal/models"
+	"github.com/ysaakpr/rex/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/services"
 )
 
 type SystemUserHandler struct {

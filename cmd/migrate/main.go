@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/vyshakhp/utm-backend/internal/config"
-	"github.com/vyshakhp/utm-backend/internal/database"
+	"github.com/ysaakpr/rex/internal/config"
+	"github.com/ysaakpr/rex/internal/database"
 )
 
 func main() {

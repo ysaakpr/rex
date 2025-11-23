@@ -8,7 +8,7 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/pkg/response"
 )
 
 // AuthMiddleware verifies SuperTokens session

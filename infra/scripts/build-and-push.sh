@@ -55,35 +55,35 @@ cd ../..
 
 # Build API image
 echo -e "${YELLOW}Building API image...${NC}"
-docker build -f Dockerfile.prod --target api -t utm-backend-api:latest .
+docker build -f Dockerfile.prod --target api -t rex-backend-api:latest .
 echo -e "${GREEN}✓ API image built${NC}"
 
 # Build Worker image
 echo -e "${YELLOW}Building Worker image...${NC}"
-docker build -f Dockerfile.prod --target worker -t utm-backend-worker:latest .
+docker build -f Dockerfile.prod --target worker -t rex-backend-worker:latest .
 echo -e "${GREEN}✓ Worker image built${NC}"
 
 # Build Frontend image
 echo -e "${YELLOW}Building Frontend image...${NC}"
-docker build -f frontend/Dockerfile.prod -t utm-backend-frontend:latest frontend/
+docker build -f frontend/Dockerfile.prod -t rex-backend-frontend:latest frontend/
 echo -e "${GREEN}✓ Frontend image built${NC}"
 echo ""
 
 # Tag and push API
 echo -e "${YELLOW}Pushing API image to ECR...${NC}"
-docker tag utm-backend-api:latest "${API_REPO}:latest"
+docker tag rex-backend-api:latest "${API_REPO}:latest"
 docker push "${API_REPO}:latest"
 echo -e "${GREEN}✓ API image pushed${NC}"
 
 # Tag and push Worker
 echo -e "${YELLOW}Pushing Worker image to ECR...${NC}"
-docker tag utm-backend-worker:latest "${WORKER_REPO}:latest"
+docker tag rex-backend-worker:latest "${WORKER_REPO}:latest"
 docker push "${WORKER_REPO}:latest"
 echo -e "${GREEN}✓ Worker image pushed${NC}"
 
 # Tag and push Frontend
 echo -e "${YELLOW}Pushing Frontend image to ECR...${NC}"
-docker tag utm-backend-frontend:latest "${FRONTEND_REPO}:latest"
+docker tag rex-backend-frontend:latest "${FRONTEND_REPO}:latest"
 docker push "${FRONTEND_REPO}:latest"
 echo -e "${GREEN}✓ Frontend image pushed${NC}"
 echo ""

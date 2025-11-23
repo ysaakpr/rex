@@ -20,7 +20,7 @@ type DatabaseResources struct {
 func createDatabase(ctx *pulumi.Context, projectName, environment string, network *NetworkingResources,
 	securityGroups *SecurityGroups, masterUsername string, masterPassword pulumi.StringOutput, tags pulumi.StringMap) (*DatabaseResources, error) {
 
-	mainDBName := "utm_backend"
+	mainDBName := "rex_backend"
 	supertokensDBName := "supertokens"
 
 	// Create DB Subnet Group

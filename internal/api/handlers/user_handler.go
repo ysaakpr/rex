@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
-	"github.com/vyshakhp/utm-backend/internal/pkg/response"
+	"github.com/ysaakpr/rex/internal/pkg/response"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -27,7 +27,8 @@ func NewUserHandler(logger *zap.Logger, db *gorm.DB) *UserHandler {
 
 // UserDetailsResponse defines the response structure for user details
 type UserDetailsResponse struct {
-	UserID      string `json:"user_id"`
+	ID          string `json:"id"`      // Alias for UserID for convenience
+	UserID      string `json:"user_id"` // Original field for backward compatibility
 	Email       string `json:"email"`
 	Name        string `json:"name,omitempty"`
 	IsActive    bool   `json:"is_active"`
@@ -87,13 +88,13 @@ func (h *UserHandler) GetUserDetails(c *gin.Context) {
 
 	// Build response
 	userDetails := UserDetailsResponse{
+		ID:          userInfo.ID,
 		UserID:      userInfo.ID,
 		Email:       userInfo.Email,
-		IsActive:    true, // SuperTokens users are active by default
+		Name:        userInfo.Email, // Use email as name fallback
+		IsActive:    true,           // SuperTokens users are active by default
 		TenantCount: int(tenantCount),
 		IsSystem:    isSystem,
-		// SuperTokens doesn't store name by default in EmailPassword recipe
-		// We can add it later if we use user metadata
 	}
 
 	response.Success(c, http.StatusOK, "User details retrieved successfully", userDetails)
@@ -225,9 +226,11 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		isSystem := systemUserMap[userID]
 
 		userDetails := UserDetailsResponse{
+			ID:          userInfo.ID,
 			UserID:      userInfo.ID,
 			Email:       userInfo.Email,
-			IsActive:    true, // SuperTokens users are active by default
+			Name:        userInfo.Email, // Use email as name fallback
+			IsActive:    true,           // SuperTokens users are active by default
 			TenantCount: int(tenantCount),
 			IsSystem:    isSystem,
 		}
@@ -280,13 +283,23 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	})
 }
 
+// UserTenantMembership represents a user's membership in a tenant
+type UserTenantMembership struct {
+	TenantID   string `gorm:"column:tenant_id" json:"tenant_id"`
+	TenantName string `gorm:"column:tenant_name" json:"tenant_name"`
+	RoleID     string `gorm:"column:role_id" json:"role_id"`
+	RoleName   string `gorm:"column:role_name" json:"role_name"`
+	Status     string `gorm:"column:status" json:"status"`
+	JoinedAt   string `gorm:"column:joined_at" json:"joined_at"`
+}
+
 // GetUserTenants godoc
 // @Summary Get user's tenant memberships
 // @Description Fetches all tenants a user belongs to with their relations and roles
 // @Tags users
 // @Produce json
 // @Param user_id path string true "User ID"
-// @Success 200 {object} response.Response{data=[]map[string]interface{}}
+// @Success 200 {object} response.Response{data=[]UserTenantMembership}
 // @Failure 400 {object} response.Response
 // @Failure 500 {object} response.Response
 // @Router /api/v1/users/{user_id}/tenants [get]
@@ -297,13 +310,150 @@ func (h *UserHandler) GetUserTenants(c *gin.Context) {
 		return
 	}
 
-	// This would query the database for all tenant_members records for this user
-	// Including tenant info, relation, and roles
-	// Implementation would go here
-
 	h.logger.Info("Get user tenants requested", zap.String("user_id", userID))
 
-	response.Success(c, http.StatusOK, "User tenants retrieved", []map[string]interface{}{})
+	// Query tenant memberships with joins to get tenant and role names
+	var memberships []UserTenantMembership
+	err := h.db.Table("tenant_members").
+		Select(`
+			tenant_members.tenant_id,
+			tenants.name as tenant_name,
+			tenant_members.role_id,
+			roles.name as role_name,
+			tenant_members.status,
+			tenant_members.joined_at
+		`).
+		Joins("LEFT JOIN tenants ON tenants.id = tenant_members.tenant_id").
+		Joins("LEFT JOIN roles ON roles.id = tenant_members.role_id").
+		Where("tenant_members.user_id = ?", userID).
+		Where("tenant_members.status = ?", "active").
+		Order("tenant_members.joined_at DESC").
+		Scan(&memberships).Error
+
+	if err != nil {
+		h.logger.Error("Failed to fetch user tenants",
+			zap.String("user_id", userID),
+			zap.Error(err))
+		response.InternalServerError(c, err)
+		return
+	}
+
+	h.logger.Info("User tenants retrieved successfully",
+		zap.String("user_id", userID),
+		zap.Int("count", len(memberships)))
+
+	response.Success(c, http.StatusOK, "User tenants retrieved successfully", memberships)
+}
+
+// SearchUsers godoc
+// @Summary Search users by name or email
+// @Description Search for users by partial name or email match, returns simplified results
+// @Tags users
+// @Produce json
+// @Param q query string true "Search query (name or email)"
+// @Success 200 {object} response.Response{data=[]UserDetailsResponse}
+// @Failure 400 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /api/v1/users/search [get]
+func (h *UserHandler) SearchUsers(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" || len(query) < 2 {
+		response.BadRequest(c, errors.New("search query must be at least 2 characters"))
+		return
+	}
+
+	h.logger.Info("Search users requested", zap.String("query", query))
+
+	// Collect all user IDs from various sources
+	allUserIDsMap := make(map[string]bool)
+
+	// 1. Get user IDs from tenants (creators)
+	var tenantCreators []string
+	if err := h.db.Table("tenants").
+		Where("deleted_at IS NULL").
+		Distinct("created_by").
+		Pluck("created_by", &tenantCreators).Error; err == nil {
+		for _, id := range tenantCreators {
+			allUserIDsMap[id] = true
+		}
+	}
+
+	// 2. Get user IDs from tenant_members
+	var memberUserIDs []string
+	if err := h.db.Table("tenant_members").
+		Distinct("user_id").
+		Pluck("user_id", &memberUserIDs).Error; err == nil {
+		for _, id := range memberUserIDs {
+			allUserIDsMap[id] = true
+		}
+	}
+
+	// 3. Get user IDs from system_users
+	var systemUserIDs []string
+	if err := h.db.Table("system_users").
+		Distinct("user_id").
+		Pluck("user_id", &systemUserIDs).Error; err == nil {
+		for _, id := range systemUserIDs {
+			allUserIDsMap[id] = true
+		}
+	}
+
+	// 4. Get user IDs from platform_admins
+	var platformAdminIDs []string
+	if err := h.db.Table("platform_admins").
+		Distinct("user_id").
+		Pluck("user_id", &platformAdminIDs).Error; err == nil {
+		for _, id := range platformAdminIDs {
+			allUserIDsMap[id] = true
+		}
+	}
+
+	// Build a map of system user IDs for quick lookup
+	systemUserMap := make(map[string]bool)
+	for _, id := range systemUserIDs {
+		systemUserMap[id] = true
+	}
+
+	// Fetch user details from SuperTokens and filter
+	queryLower := strings.ToLower(query)
+	var matchedUsers []UserDetailsResponse
+	for userID := range allUserIDsMap {
+		userInfo, err := emailpassword.GetUserByID(userID)
+		if err != nil || userInfo == nil {
+			continue
+		}
+
+		// Check if email matches the search query
+		if strings.Contains(strings.ToLower(userInfo.Email), queryLower) {
+			// Count tenant memberships
+			var tenantCount int64
+			h.db.Table("tenant_members").
+				Where("user_id = ?", userID).
+				Where("status != ?", "inactive").
+				Count(&tenantCount)
+
+			matchedUsers = append(matchedUsers, UserDetailsResponse{
+				ID:          userInfo.ID,
+				UserID:      userInfo.ID,
+				Email:       userInfo.Email,
+				Name:        userInfo.Email, // Use email as name fallback
+				IsActive:    true,
+				TenantCount: int(tenantCount),
+				IsSystem:    systemUserMap[userID],
+			})
+
+			// Limit results to prevent overwhelming the UI
+			if len(matchedUsers) >= 20 {
+				break
+			}
+		}
+	}
+
+	h.logger.Info("User search completed",
+		zap.String("query", query),
+		zap.Int("matches", len(matchedUsers)))
+
+	response.Success(c, http.StatusOK, "Users retrieved successfully", matchedUsers)
 }
 
 // GetBatchUserDetails godoc
@@ -348,8 +498,10 @@ func (h *UserHandler) GetBatchUserDetails(c *gin.Context) {
 
 		if userInfo != nil {
 			usersMap[userID] = UserDetailsResponse{
+				ID:     userInfo.ID,
 				UserID: userInfo.ID,
 				Email:  userInfo.Email,
+				Name:   userInfo.Email, // Use email as name fallback
 			}
 		}
 	}

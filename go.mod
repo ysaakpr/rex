@@ -1,4 +1,4 @@
-module github.com/vyshakhp/utm-backend
+module github.com/ysaakpr/rex
 
 go 1.23.0
 

@@ -90,6 +90,6 @@ echo "Monitor deployment progress:"
 echo "  aws ecs describe-services --cluster $CLUSTER_NAME --services $API_SERVICE"
 echo ""
 echo "View logs:"
-echo "  aws logs tail /ecs/\$(pulumi config get utm-backend:projectName)-\$(pulumi config get utm-backend:environment)-api --follow"
+echo "  aws logs tail /ecs/\$(pulumi config get rex-backend:projectName)-\$(pulumi config get rex-backend:environment)-api --follow"
 echo ""
 
