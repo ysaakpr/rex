@@ -9,6 +9,8 @@ import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Textarea } from '../ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Select } from '../ui/select';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 export function PolicyDetailsPage() {
   const { id } = useParams();
@@ -25,6 +27,9 @@ export function PolicyDetailsPage() {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [permissionSearch, setPermissionSearch] = useState('');
+  const [selectedService, setSelectedService] = useState('all');
+  const [showBulkAddWarning, setShowBulkAddWarning] = useState(false);
+  const [addingBulk, setAddingBulk] = useState(false);
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -154,7 +159,7 @@ export function PolicyDetailsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ permission_id: permissionId })
+        body: JSON.stringify({ permission_ids: [permissionId] })
       });
 
       if (!response.ok) {
@@ -163,7 +168,15 @@ export function PolicyDetailsPage() {
       }
 
       console.log('[PolicyDetailsPage] Permission added successfully');
-      loadPolicyDetails();
+      
+      // Optimistic UI update - add permission to local state instead of full reload
+      const addedPermission = allPermissions.find(p => p.id === permissionId);
+      if (addedPermission) {
+        setPolicy(prev => ({
+          ...prev,
+          permissions: [...(prev.permissions || []), addedPermission]
+        }));
+      }
     } catch (err) {
       console.error('[PolicyDetailsPage] Error adding permission:', err);
       setError(err.message);
@@ -184,7 +197,12 @@ export function PolicyDetailsPage() {
       }
 
       console.log('[PolicyDetailsPage] Permission removed successfully');
-      loadPolicyDetails();
+      
+      // Optimistic UI update - remove permission from local state
+      setPolicy(prev => ({
+        ...prev,
+        permissions: (prev.permissions || []).filter(p => p.id !== permissionId)
+      }));
     } catch (err) {
       console.error('[PolicyDetailsPage] Error removing permission:', err);
       setError(err.message);
@@ -193,12 +211,110 @@ export function PolicyDetailsPage() {
 
   const getAvailablePermissions = () => {
     const policyPermissionIds = new Set((policy?.permissions || []).map(p => p.id));
-    return allPermissions.filter(p => !policyPermissionIds.has(p.id));
+    const available = allPermissions.filter(p => !policyPermissionIds.has(p.id));
+    console.log('[PolicyDetailsPage] Available permissions:', available.length);
+    return available;
   };
 
-  const filteredAvailablePermissions = getAvailablePermissions().filter(p =>
-    (p.key || `${p.service}:${p.entity}:${p.action}`)?.toLowerCase().includes(permissionSearch.toLowerCase())
-  );
+  const getUniqueServices = () => {
+    const available = getAvailablePermissions();
+    const services = new Set(available.map(p => p.service).filter(Boolean));
+    const serviceList = Array.from(services).sort();
+    console.log('[PolicyDetailsPage] Unique services:', serviceList);
+    return serviceList;
+  };
+
+  const getFilteredPermissions = () => {
+    const available = getAvailablePermissions();
+    
+    const filtered = available.filter(p => {
+      // Filter by service
+      if (selectedService !== 'all' && p.service !== selectedService) {
+        return false;
+      }
+      // Filter by search
+      if (permissionSearch && permissionSearch.trim()) {
+        const searchText = (p.key || `${p.service}:${p.entity}:${p.action}`).toLowerCase();
+        return searchText.includes(permissionSearch.toLowerCase());
+      }
+      return true;
+    });
+    
+    console.log('[PolicyDetailsPage] Filtered permissions:', {
+      selectedService,
+      searchTerm: permissionSearch,
+      totalAvailable: available.length,
+      filtered: filtered.length
+    });
+    
+    return filtered;
+  };
+
+  const filteredAvailablePermissions = getFilteredPermissions();
+
+  const groupPermissionsByService = (permissions) => {
+    const grouped = {};
+    permissions.forEach(permission => {
+      const service = permission.service || 'Unknown';
+      if (!grouped[service]) {
+        grouped[service] = [];
+      }
+      grouped[service].push(permission);
+    });
+    // Sort services alphabetically
+    return Object.keys(grouped).sort().reduce((acc, key) => {
+      acc[key] = grouped[key];
+      return acc;
+    }, {});
+  };
+
+  const handleBulkAddPermissions = async () => {
+    console.log('[PolicyDetailsPage] Bulk adding permissions');
+    
+    try {
+      setAddingBulk(true);
+      const permissionIds = filteredAvailablePermissions.map(p => p.id);
+      
+      const response = await fetch(`/api/v1/platform/policies/${id}/permissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ permission_ids: permissionIds })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add permissions');
+      }
+
+      console.log('[PolicyDetailsPage] Permissions added successfully');
+      setShowBulkAddWarning(false);
+      
+      // Optimistic UI update - add all permissions to local state
+      setPolicy(prev => ({
+        ...prev,
+        permissions: [...(prev.permissions || []), ...filteredAvailablePermissions]
+      }));
+      
+      // Clear search and reset filters
+      setPermissionSearch('');
+      setSelectedService('all');
+    } catch (err) {
+      console.error('[PolicyDetailsPage] Error adding permissions:', err);
+      setError(err.message);
+    } finally {
+      setAddingBulk(false);
+    }
+  };
+
+  const handleAddAllClick = () => {
+    // Show warning if adding all permissions without any filter
+    if (selectedService === 'all' && !permissionSearch) {
+      setShowBulkAddWarning(true);
+    } else {
+      handleBulkAddPermissions();
+    }
+  };
 
   if (loading) {
     return (
@@ -298,27 +414,50 @@ export function PolicyDetailsPage() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {policy.permissions.map((permission) => (
-                    <div
-                      key={permission.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <p className="font-mono text-sm">
-                          {permission.key || `${permission.service}:${permission.entity}:${permission.action}`}
-                        </p>
-                        {permission.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{permission.description}</p>
-                        )}
+                <div className="space-y-6">
+                  {Object.entries(groupPermissionsByService(policy.permissions)).map(([service, permissions]) => (
+                    <div key={service}>
+                      {/* Service Header */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="outline" className="font-mono">
+                          {service}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {permissions.length} permission{permissions.length !== 1 ? 's' : ''}
+                        </span>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemovePermission(permission.id)}
-                      >
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
+                      
+                      {/* Permissions in this service - 3 column grid */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {permissions.map((permission) => {
+                          const fullKey = permission.key || `${permission.service}:${permission.entity}:${permission.action}`;
+                          return (
+                            <div
+                              key={permission.id}
+                              className="flex items-start justify-between p-3 border rounded-lg bg-card hover:bg-muted/50 transition-colors group"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="font-mono text-sm truncate" title={fullKey}>
+                                  {fullKey}
+                                </p>
+                                {permission.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={permission.description}>
+                                    {permission.description}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 ml-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                onClick={() => handleRemovePermission(permission.id)}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -445,25 +584,102 @@ export function PolicyDetailsPage() {
 
       {/* Add Permission Dialog */}
       <Dialog open={showAddPermissionDialog} onOpenChange={setShowAddPermissionDialog}>
-        <DialogContent onClose={() => setShowAddPermissionDialog(false)} className="max-w-2xl">
+        <DialogContent onClose={() => {
+          setShowAddPermissionDialog(false);
+          setPermissionSearch('');
+          setSelectedService('all');
+        }} className="max-w-6xl w-[90vw]">
           <DialogHeader>
-            <DialogTitle>Add Permission</DialogTitle>
+            <DialogTitle>Add Permissions</DialogTitle>
             <DialogDescription>
               Select permissions to add to this policy
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Input
-              placeholder="Search permissions..."
-              value={permissionSearch}
-              onChange={(e) => setPermissionSearch(e.target.value)}
-            />
+            {/* Filters */}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label>Service / App</Label>
+                <Select 
+                  value={selectedService} 
+                  onChange={(e) => {
+                    console.log('[PolicyDetailsPage] Service selected:', e.target.value);
+                    setSelectedService(e.target.value);
+                  }}
+                >
+                  <option value="all">All Services</option>
+                  {getUniqueServices().map(service => (
+                    <option key={service} value={service}>
+                      {service}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex-1">
+                <Label>Search</Label>
+                <Input
+                  placeholder="Search permissions..."
+                  value={permissionSearch}
+                  onChange={(e) => setPermissionSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Bulk Add Button */}
+            {filteredAvailablePermissions.length > 0 && (
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <span className="text-sm">
+                  <strong>{filteredAvailablePermissions.length}</strong> permission{filteredAvailablePermissions.length !== 1 ? 's' : ''} available
+                </span>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleAddAllClick}
+                  disabled={addingBulk}
+                >
+                  {addingBulk && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add All {filteredAvailablePermissions.length > 0 && `(${filteredAvailablePermissions.length})`}
+                </Button>
+              </div>
+            )}
+
+            {/* Warning for adding all permissions without filter */}
+            {showBulkAddWarning && (
+              <Alert variant="warning">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Full Access Warning</AlertTitle>
+                <AlertDescription>
+                  You are about to give full access to this policy by adding all {filteredAvailablePermissions.length} permissions.
+                  This grants complete control across all services.
+                  <div className="flex gap-2 mt-3">
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleBulkAddPermissions}
+                      disabled={addingBulk}
+                    >
+                      {addingBulk && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Yes, Add All
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowBulkAddWarning(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Permission List */}
             <div className="max-h-96 overflow-y-auto space-y-2">
               {filteredAvailablePermissions.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   {getAvailablePermissions().length === 0
                     ? 'All available permissions are already assigned'
-                    : 'No permissions found matching your search'}
+                    : 'No permissions found matching your filters'}
                 </div>
               ) : (
                 filteredAvailablePermissions.map((permission) => (
@@ -483,8 +699,6 @@ export function PolicyDetailsPage() {
                       size="sm"
                       onClick={() => {
                         handleAddPermission(permission.id);
-                        setShowAddPermissionDialog(false);
-                        setPermissionSearch('');
                       }}
                     >
                       Add
@@ -498,6 +712,7 @@ export function PolicyDetailsPage() {
             <Button variant="outline" onClick={() => {
               setShowAddPermissionDialog(false);
               setPermissionSearch('');
+              setSelectedService('all');
             }}>
               Close
             </Button>
