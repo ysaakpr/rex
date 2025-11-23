@@ -29,8 +29,20 @@ export function PermissionsPage() {
     description: ''
   });
 
-  const apps = ['all', 'platform-api', 'tenant-api', 'user-api'];
   const actions = ['read', 'write', 'delete', 'manage', 'create', 'update'];
+
+  // Dynamically get unique services from permissions
+  const getUniqueServices = () => {
+    const services = permissions
+      .map(p => p.service)
+      .filter(Boolean) // Remove null/undefined
+      .filter((value, index, self) => self.indexOf(value) === index) // Unique values
+      .sort(); // Alphabetically sorted
+    
+    return ['all', ...services];
+  };
+
+  const apps = getUniqueServices();
 
   useEffect(() => {
     loadPermissions();
@@ -70,13 +82,9 @@ export function PermissionsPage() {
   const filterPermissions = () => {
     let filtered = [...permissions];
 
-    // Filter by service (what we're calling "app" in the UI)
+    // Filter by service
     if (selectedApp !== 'all') {
-      filtered = filtered.filter(p => {
-        // Check if service starts with the selected app
-        // (e.g., "tenant" service for "tenant-api" app)
-        return p.service?.toLowerCase().includes(selectedApp.replace('-api', ''));
-      });
+      filtered = filtered.filter(p => p.service === selectedApp);
     }
 
     // Filter by search query
@@ -86,7 +94,8 @@ export function PermissionsPage() {
         p.key?.toLowerCase().includes(query) ||
         p.service?.toLowerCase().includes(query) ||
         p.entity?.toLowerCase().includes(query) ||
-        p.action?.toLowerCase().includes(query)
+        p.action?.toLowerCase().includes(query) ||
+        p.description?.toLowerCase().includes(query)
       );
     }
 
@@ -202,10 +211,47 @@ export function PermissionsPage() {
             Manage platform and tenant permissions
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Permission
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Grouped Filter: Dropdown + Search */}
+          <div className="flex items-center border border-input rounded-md overflow-hidden bg-background">
+            {/* App Filter Dropdown */}
+            <select
+              value={selectedApp}
+              onChange={(e) => {
+                console.log('[PermissionsPage] App filter changed:', e.target.value);
+                setSelectedApp(e.target.value);
+              }}
+              className="h-10 w-40 border-0 border-r border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-0"
+            >
+              {apps.map(app => (
+                <option key={app} value={app}>
+                  {app === 'all' ? 'All Apps' : app}
+                </option>
+              ))}
+            </select>
+            
+            {/* Search Field */}
+            <div className="relative flex-1 w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search permissions..."
+                value={searchQuery}
+                onChange={(e) => {
+                  console.log('[PermissionsPage] Search query changed:', e.target.value);
+                  setSearchQuery(e.target.value);
+                }}
+                className="h-10 w-full border-0 bg-transparent pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+              />
+            </div>
+          </div>
+          
+          {/* Create Button */}
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Permission
+          </Button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -217,112 +263,52 @@ export function PermissionsPage() {
         </Card>
       )}
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="app-filter">Filter by App</Label>
-              <select
-                id="app-filter"
-                value={selectedApp}
-                onChange={(e) => {
-                  console.log('[PermissionsPage] App filter changed:', e.target.value);
-                  setSelectedApp(e.target.value);
-                }}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              >
-                {apps.map(app => (
-                  <option key={app} value={app}>
-                    {app === 'all' ? 'All Apps' : app}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="search">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Search permissions..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    console.log('[PermissionsPage] Search query changed:', e.target.value);
-                    setSearchQuery(e.target.value);
-                  }}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Permissions List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Permissions ({filteredPermissions.length})
-          </CardTitle>
-          <CardDescription>
-            {selectedApp !== 'all' && `Showing permissions for ${selectedApp}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredPermissions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-sm">No permissions found</p>
-              <p className="text-xs mt-1">Try adjusting your filters or create a new permission</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPermissions.map((permission) => {
-                return (
-                  <div
-                    key={permission.id}
-                    className="flex flex-col p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-mono text-sm font-medium break-all">
-                          {permission.key || `${permission.service}:${permission.entity}:${permission.action}`}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          onClick={() => {
-                            console.log('[PermissionsPage] Delete clicked for:', permission.id);
-                            setPermissionToDelete(permission);
-                            setShowDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                      {permission.description && (
-                        <p className="text-xs text-muted-foreground">{permission.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">Service: {permission.service}</Badge>
-                        <Badge variant="outline" className="text-xs">Entity: {permission.entity}</Badge>
-                        <Badge className="text-xs">{permission.action}</Badge>
-                      </div>
-                    </div>
+      {filteredPermissions.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p className="text-sm">No permissions found</p>
+          <p className="text-xs mt-1">Try adjusting your filters or create a new permission</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPermissions.map((permission) => {
+            return (
+              <div
+                key={permission.id}
+                className="flex flex-col p-4 border rounded-lg hover:bg-muted/50 transition-colors bg-card"
+              >
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-mono text-sm font-medium break-all">
+                      {permission.key || `${permission.service}:${permission.entity}:${permission.action}`}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 flex-shrink-0"
+                      onClick={() => {
+                        console.log('[PermissionsPage] Delete clicked for:', permission.id);
+                        setPermissionToDelete(permission);
+                        setShowDeleteDialog(true);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  {permission.description && (
+                    <p className="text-xs text-muted-foreground">{permission.description}</p>
+                  )}
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge variant="outline" className="text-xs">Service: {permission.service}</Badge>
+                    <Badge variant="outline" className="text-xs">Entity: {permission.entity}</Badge>
+                    <Badge className="text-xs">{permission.action}</Badge>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Create Permission Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

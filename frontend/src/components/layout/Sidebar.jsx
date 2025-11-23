@@ -22,19 +22,14 @@ const sidebarItems = [
     path: '/applications',
   },
   {
-    title: 'Roles',
-    icon: Shield,
-    path: '/roles',
-  },
-  {
-    title: 'Permissions',
+    title: 'Policies',
     icon: Key,
     path: '/permissions',
   },
   {
-    title: 'Tenant Relations',
-    icon: Users,
-    path: '/relations',
+    title: 'Roles',
+    icon: Shield,
+    path: '/roles',
   },
 ];
 

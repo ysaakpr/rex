@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"net/http"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -27,17 +27,17 @@ func NewRBACHandler(rbacService services.RBACService) *RBACHandler {
 func (h *RBACHandler) CreateRole(c *gin.Context) {
 	var input models.CreateRoleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	role, err := h.rbacService.CreateRole(&input)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusCreated, role.ToResponse())
+	response.Created(c, "Role created successfully", role.ToResponse())
 }
 
 func (h *RBACHandler) ListRoles(c *gin.Context) {
@@ -45,7 +45,7 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 	if tenantIDStr := c.Query("tenant_id"); tenantIDStr != "" {
 		id, err := uuid.Parse(tenantIDStr)
 		if err != nil {
-			response.Error(c, http.StatusBadRequest, "Invalid tenant_id", err)
+			response.BadRequest(c, err)
 			return
 		}
 		tenantID = &id
@@ -53,7 +53,7 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 
 	roles, err := h.rbacService.ListRoles(tenantID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to list roles", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
@@ -62,60 +62,60 @@ func (h *RBACHandler) ListRoles(c *gin.Context) {
 		roleResponses[i] = role.ToResponse()
 	}
 
-	response.Success(c, http.StatusOK, roleResponses)
+	response.OK(c, roleResponses)
 }
 
 func (h *RBACHandler) GetRole(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	role, err := h.rbacService.GetRole(id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Role not found", err)
+		response.NotFound(c, "Role not found")
 		return
 	}
 
-	response.Success(c, http.StatusOK, role.ToResponse())
+	response.OK(c, role.ToResponse())
 }
 
 func (h *RBACHandler) UpdateRole(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	var input models.UpdateRoleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	role, err := h.rbacService.UpdateRole(id, &input)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, role.ToResponse())
+	response.OK(c, role.ToResponse())
 }
 
 func (h *RBACHandler) DeleteRole(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.DeleteRole(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Role deleted successfully"})
+	response.OK(c, gin.H{"message": "Role deleted successfully"})
 }
 
 // ============================================================================
@@ -125,17 +125,17 @@ func (h *RBACHandler) DeleteRole(c *gin.Context) {
 func (h *RBACHandler) CreatePolicy(c *gin.Context) {
 	var input models.CreatePolicyInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	policy, err := h.rbacService.CreatePolicy(&input)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusCreated, policy.ToResponse())
+	response.Created(c, "Policy created successfully", policy.ToResponse())
 }
 
 func (h *RBACHandler) ListPolicies(c *gin.Context) {
@@ -143,7 +143,7 @@ func (h *RBACHandler) ListPolicies(c *gin.Context) {
 	if tenantIDStr := c.Query("tenant_id"); tenantIDStr != "" {
 		id, err := uuid.Parse(tenantIDStr)
 		if err != nil {
-			response.Error(c, http.StatusBadRequest, "Invalid tenant_id", err)
+			response.BadRequest(c, err)
 			return
 		}
 		tenantID = &id
@@ -151,7 +151,7 @@ func (h *RBACHandler) ListPolicies(c *gin.Context) {
 
 	policies, err := h.rbacService.ListPolicies(tenantID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to list policies", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
@@ -160,60 +160,60 @@ func (h *RBACHandler) ListPolicies(c *gin.Context) {
 		policyResponses[i] = policy.ToResponse()
 	}
 
-	response.Success(c, http.StatusOK, policyResponses)
+	response.OK(c, policyResponses)
 }
 
 func (h *RBACHandler) GetPolicy(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	policy, err := h.rbacService.GetPolicy(id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Policy not found", err)
+		response.NotFound(c, "Policy not found")
 		return
 	}
 
-	response.Success(c, http.StatusOK, policy.ToResponse())
+	response.OK(c, policy.ToResponse())
 }
 
 func (h *RBACHandler) UpdatePolicy(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	var input models.UpdatePolicyInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	policy, err := h.rbacService.UpdatePolicy(id, &input)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, policy.ToResponse())
+	response.OK(c, policy.ToResponse())
 }
 
 func (h *RBACHandler) DeletePolicy(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.DeletePolicy(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Policy deleted successfully"})
+	response.OK(c, gin.H{"message": "Policy deleted successfully"})
 }
 
 // ============================================================================
@@ -223,17 +223,17 @@ func (h *RBACHandler) DeletePolicy(c *gin.Context) {
 func (h *RBACHandler) CreatePermission(c *gin.Context) {
 	var input models.CreatePermissionInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	permission, err := h.rbacService.CreatePermission(&input)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusCreated, permission.ToResponse())
+	response.Created(c, "Permission created successfully", permission.ToResponse())
 }
 
 func (h *RBACHandler) ListPermissions(c *gin.Context) {
@@ -248,7 +248,7 @@ func (h *RBACHandler) ListPermissions(c *gin.Context) {
 	}
 
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to list permissions", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
@@ -257,38 +257,38 @@ func (h *RBACHandler) ListPermissions(c *gin.Context) {
 		permissionResponses[i] = permission.ToResponse()
 	}
 
-	response.Success(c, http.StatusOK, permissionResponses)
+	response.OK(c, permissionResponses)
 }
 
 func (h *RBACHandler) GetPermission(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid permission ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	permission, err := h.rbacService.GetPermission(id)
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Permission not found", err)
+		response.NotFound(c, "Permission not found")
 		return
 	}
 
-	response.Success(c, http.StatusOK, permission.ToResponse())
+	response.OK(c, permission.ToResponse())
 }
 
 func (h *RBACHandler) DeletePermission(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid permission ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.DeletePermission(id); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Permission deleted successfully"})
+	response.OK(c, gin.H{"message": "Permission deleted successfully"})
 }
 
 // ============================================================================
@@ -298,43 +298,43 @@ func (h *RBACHandler) DeletePermission(c *gin.Context) {
 func (h *RBACHandler) AssignPermissionsToPolicy(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	var input models.AssignPermissionsInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.AssignPermissionsToPolicy(id, input.PermissionIDs); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Permissions assigned successfully"})
+	response.OK(c, gin.H{"message": "Permissions assigned successfully"})
 }
 
 func (h *RBACHandler) RevokePermissionFromPolicy(c *gin.Context) {
 	policyID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	permissionID, err := uuid.Parse(c.Param("permission_id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid permission ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.RevokePermissionFromPolicy(policyID, permissionID); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Permission revoked successfully"})
+	response.OK(c, gin.H{"message": "Permission revoked successfully"})
 }
 
 // ============================================================================
@@ -349,23 +349,23 @@ func (h *RBACHandler) Authorize(c *gin.Context) {
 	action := c.Query("action")
 
 	if tenantIDStr == "" || userID == "" || service == "" || entity == "" || action == "" {
-		response.Error(c, http.StatusBadRequest, "Missing required query parameters", nil)
+		response.BadRequest(c, errors.New("missing required query parameters"))
 		return
 	}
 
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid tenant_id", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	hasPermission, err := h.rbacService.CheckUserPermission(tenantID, userID, service, entity, action)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to check permission", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{
+	response.OK(c, gin.H{
 		"authorized": hasPermission,
 	})
 }
@@ -375,19 +375,19 @@ func (h *RBACHandler) GetUserPermissions(c *gin.Context) {
 	userID := c.Query("user_id")
 
 	if tenantIDStr == "" || userID == "" {
-		response.Error(c, http.StatusBadRequest, "Missing tenant_id or user_id", nil)
+		response.BadRequest(c, errors.New("missing tenant_id or user_id"))
 		return
 	}
 
 	tenantID, err := uuid.Parse(tenantIDStr)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid tenant_id", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	permissions, err := h.rbacService.GetUserPermissions(tenantID, userID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to get user permissions", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
@@ -396,7 +396,7 @@ func (h *RBACHandler) GetUserPermissions(c *gin.Context) {
 		permissionResponses[i] = permission.ToResponse()
 	}
 
-	response.Success(c, http.StatusOK, permissionResponses)
+	response.OK(c, permissionResponses)
 }
 
 // ============================================================================
@@ -406,55 +406,55 @@ func (h *RBACHandler) GetUserPermissions(c *gin.Context) {
 func (h *RBACHandler) AssignPoliciesToRole(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	var input models.AssignPoliciesToRoleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid input", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.AssignPoliciesToRole(id, input.PolicyIDs); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Policies assigned successfully"})
+	response.OK(c, gin.H{"message": "Policies assigned successfully"})
 }
 
 func (h *RBACHandler) RevokePolicyFromRole(c *gin.Context) {
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	policyID, err := uuid.Parse(c.Param("policy_id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid policy ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	if err := h.rbacService.RevokePolicyFromRole(roleID, policyID); err != nil {
-		response.Error(c, http.StatusBadRequest, err.Error(), err)
+		response.BadRequest(c, err)
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"message": "Policy revoked successfully"})
+	response.OK(c, gin.H{"message": "Policy revoked successfully"})
 }
 
 func (h *RBACHandler) GetRolePolicies(c *gin.Context) {
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid role ID", err)
+		response.BadRequest(c, err)
 		return
 	}
 
 	policies, err := h.rbacService.GetRolePolicies(roleID)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to get role policies", err)
+		response.InternalServerError(c, err)
 		return
 	}
 
@@ -463,5 +463,5 @@ func (h *RBACHandler) GetRolePolicies(c *gin.Context) {
 		policyResponses[i] = policy.ToResponse()
 	}
 
-	response.Success(c, http.StatusOK, policyResponses)
+	response.OK(c, policyResponses)
 }

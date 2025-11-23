@@ -9,6 +9,10 @@
 - **[API Authentication Guide](API_AUTHENTICATION_GUIDE.md)** - Complete curl examples with authentication
 - **[API Examples](API_EXAMPLES.md)** - API endpoint examples and usage
 
+### Implementation Summaries
+- **[RBAC Refactoring Summary](RBAC_REFACTORING_SUMMARY.md)** - Complete RBAC terminology refactoring (Relations→Roles, Roles→Policies)
+- **[Phase 2 Improvements Complete](PHASE2_IMPROVEMENTS_COMPLETE.md)** - Tenant management experience improvements
+
 ### Change Documentation (Implementation Journey)
 All implementation docs are in `changedoc/` with sequence numbers:
 

@@ -1,6 +1,8 @@
-# UTM Backend - User & Tenant Management System
+# Rex
 
-A comprehensive, production-ready Go backend system for managing multi-tenant applications with authentication, RBAC (Role-Based Access Control), and background job processing.
+> Happily developed with Cursor and Claude-4.5 🎉
+
+**A comprehensive, production-ready Go backend system for managing multi-tenant applications with authentication, RBAC (Role-Based Access Control), and background job processing.**
 
 ## 🚀 Features
 

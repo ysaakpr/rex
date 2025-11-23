@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Shield, Loader2, Lock } from 'lucide-react';
+import { Plus, Search, Users, Loader2, Shield } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -23,6 +23,7 @@ export function RolesPage() {
 
   const [newRole, setNewRole] = useState({
     name: '',
+    type: 'tenant',
     description: ''
   });
 
@@ -136,13 +137,27 @@ export function RolesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Roles</h1>
           <p className="text-muted-foreground mt-2">
-            Manage roles and their permissions
+            Manage user roles in tenants (Admin, Writer, Viewer, etc.)
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Role
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search roles..."
+              value={searchQuery}
+              onChange={(e) => {
+                console.log('[RolesPage] Search query changed:', e.target.value);
+                setSearchQuery(e.target.value);
+              }}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Role
+          </Button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -154,30 +169,12 @@ export function RolesPage() {
         </Card>
       )}
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search roles..."
-              value={searchQuery}
-              onChange={(e) => {
-                console.log('[RolesPage] Search query changed:', e.target.value);
-                setSearchQuery(e.target.value);
-              }}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Roles Grid */}
       {filteredRoles.length === 0 ? (
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center text-muted-foreground">
-              <Shield className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
               <p className="text-sm">No roles found</p>
               <p className="text-xs mt-1">
                 {searchQuery ? 'Try adjusting your search' : 'Create your first role to get started'}
@@ -200,7 +197,7 @@ export function RolesPage() {
                 <div className="flex items-center justify-between">
                   <Shield className="h-8 w-8 text-primary" />
                   <Badge variant="outline">
-                    {role.permissions?.length || 0} permissions
+                    {role.policies?.length || 0} {role.policies?.length === 1 ? 'policy' : 'policies'}
                   </Badge>
                 </div>
                 <CardTitle className="mt-4">{role.name}</CardTitle>
@@ -210,9 +207,9 @@ export function RolesPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-center text-sm text-muted-foreground gap-2">
-                  <Lock className="h-4 w-4" />
+                  <Shield className="h-4 w-4" />
                   <span>
-                    {role.relations_count || 0} {role.relations_count === 1 ? 'relation' : 'relations'}
+                    {role.policies?.length || 0} {role.policies?.length === 1 ? 'policy' : 'policies'} attached
                   </span>
                 </div>
               </CardContent>
@@ -227,7 +224,7 @@ export function RolesPage() {
           <DialogHeader>
             <DialogTitle>Create Role</DialogTitle>
             <DialogDescription>
-              Define a new role with permissions
+              Define a new user role (e.g., Admin, Writer, Viewer)
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -235,17 +232,29 @@ export function RolesPage() {
               <Label htmlFor="role-name">Role Name <span className="text-red-500">*</span></Label>
               <Input
                 id="role-name"
-                placeholder="e.g., Content Editor"
+                placeholder="e.g., Contributor, Moderator"
                 value={newRole.name}
                 onChange={(e) => setNewRole(prev => ({ ...prev, name: e.target.value }))}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="role-type">Type <span className="text-red-500">*</span></Label>
+              <select
+                id="role-type"
+                value={newRole.type}
+                onChange={(e) => setNewRole(prev => ({ ...prev, type: e.target.value }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="tenant">Tenant (for use within tenants)</option>
+                <option value="platform">Platform (system-level)</option>
+              </select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="role-description">Description</Label>
               <Textarea
                 id="role-description"
-                placeholder="Describe what this role can do..."
+                placeholder="Describe this role's purpose..."
                 value={newRole.description}
                 onChange={(e) => setNewRole(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
@@ -258,7 +267,7 @@ export function RolesPage() {
             </Button>
             <Button onClick={handleCreateRole} disabled={creating}>
               {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create & Configure
+              Create Role
             </Button>
           </DialogFooter>
         </DialogContent>

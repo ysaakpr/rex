@@ -130,21 +130,7 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 					applications.POST("/:application_name/revoke-old", deps.SystemUserHandler.RevokeOldCredentials)
 				}
 
-				// Relations (platform-level)
-				relations := platform.Group("/relations")
-				{
-					relations.POST("", deps.RBACHandler.CreateRelation)
-					relations.GET("", deps.RBACHandler.ListRelations)
-					relations.GET("/:id", deps.RBACHandler.GetRelation)
-					relations.PATCH("/:id", deps.RBACHandler.UpdateRelation)
-					relations.DELETE("/:id", deps.RBACHandler.DeleteRelation)
-					// Relation-to-role mapping
-					relations.POST("/:id/roles", deps.RBACHandler.AssignRolesToRelation)
-					relations.GET("/:id/roles", deps.RBACHandler.GetRelationRoles)
-					relations.DELETE("/:id/roles/:role_id", deps.RBACHandler.RevokeRoleFromRelation)
-				}
-
-				// Roles (platform-level)
+				// Roles (platform-level - user's role in tenant: Admin, Writer, etc.)
 				roles := platform.Group("/roles")
 				{
 					roles.POST("", deps.RBACHandler.CreateRole)
@@ -152,8 +138,22 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 					roles.GET("/:id", deps.RBACHandler.GetRole)
 					roles.PATCH("/:id", deps.RBACHandler.UpdateRole)
 					roles.DELETE("/:id", deps.RBACHandler.DeleteRole)
-					roles.POST("/:id/permissions", deps.RBACHandler.AssignPermissionsToRole)
-					roles.DELETE("/:id/permissions/:permission_id", deps.RBACHandler.RevokePermissionFromRole)
+					// Role-to-policy mapping
+					roles.POST("/:id/policies", deps.RBACHandler.AssignPoliciesToRole)
+					roles.GET("/:id/policies", deps.RBACHandler.GetRolePolicies)
+					roles.DELETE("/:id/policies/:policy_id", deps.RBACHandler.RevokePolicyFromRole)
+				}
+
+				// Policies (platform-level - group of permissions)
+				policies := platform.Group("/policies")
+				{
+					policies.POST("", deps.RBACHandler.CreatePolicy)
+					policies.GET("", deps.RBACHandler.ListPolicies)
+					policies.GET("/:id", deps.RBACHandler.GetPolicy)
+					policies.PATCH("/:id", deps.RBACHandler.UpdatePolicy)
+					policies.DELETE("/:id", deps.RBACHandler.DeletePolicy)
+					policies.POST("/:id/permissions", deps.RBACHandler.AssignPermissionsToPolicy)
+					policies.DELETE("/:id/permissions/:permission_id", deps.RBACHandler.RevokePermissionFromPolicy)
 				}
 
 				// Permissions (platform-level)
@@ -170,16 +170,16 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 			auth.GET("/platform/admins/check", deps.PlatformAdminHandler.CheckPlatformAdmin)
 
 			// Keep legacy routes for backward compatibility (deprecated)
-			relations := auth.Group("/relations")
-			{
-				relations.GET("", deps.RBACHandler.ListRelations)
-				relations.GET("/:id", deps.RBACHandler.GetRelation)
-			}
-
 			roles := auth.Group("/roles")
 			{
 				roles.GET("", deps.RBACHandler.ListRoles)
 				roles.GET("/:id", deps.RBACHandler.GetRole)
+			}
+
+			policies := auth.Group("/policies")
+			{
+				policies.GET("", deps.RBACHandler.ListPolicies)
+				policies.GET("/:id", deps.RBACHandler.GetPolicy)
 			}
 
 			permissions := auth.Group("/permissions")

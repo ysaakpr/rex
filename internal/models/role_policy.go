@@ -21,7 +21,3 @@ type RolePolicy struct {
 func (RolePolicy) TableName() string {
 	return "role_policies"
 }
-
-type AssignPoliciesToRoleInput struct {
-	PolicyIDs []uuid.UUID `json:"policy_ids" binding:"required"`
-}

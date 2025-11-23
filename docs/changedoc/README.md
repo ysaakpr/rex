@@ -111,6 +111,19 @@ This folder contains documentation created during the implementation and testing
 - RBAC implementation
 - Multi-tenancy support
 
+### 08-RBAC_REFACTORING.md
+**Created**: November 23, 2025  
+**Purpose**: Complete RBAC system terminology refactoring  
+**Content**:
+- Terminology clarification (Relations→Roles, Roles→Policies)
+- Database migration details (destructive, development-only)
+- Backend code changes (20+ files)
+- Frontend updates (15+ files)
+- API endpoint changes
+- Testing and verification procedures
+- Breaking changes documentation
+- Migration guide for production
+
 ### 11-AWS_DEPLOYMENT.md
 **Created**: November 23, 2025  
 **Purpose**: AWS infrastructure deployment with Pulumi  

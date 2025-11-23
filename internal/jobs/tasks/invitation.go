@@ -44,7 +44,7 @@ func (h *InvitationHandler) HandleUserInvitation(ctx context.Context, task *asyn
 
 	// Get invitation from database
 	var invitation models.UserInvitation
-	if err := h.db.Preload("Tenant").Preload("Relation").
+	if err := h.db.Preload("Tenant").Preload("Role").
 		Where("id = ?", invitationID).First(&invitation).Error; err != nil {
 		return fmt.Errorf("failed to get invitation: %w", err)
 	}
@@ -75,7 +75,7 @@ Hello,
 
 You have been invited to join %s on our platform.
 
-Relation: %s
+Role: %s
 
 Please click the link below to accept your invitation:
 %s
@@ -86,7 +86,7 @@ If you didn't expect this invitation, you can safely ignore this email.
 
 Best regards,
 The Team
-	`, invitation.Tenant.Name, invitation.Relation.Name, invitationURL, invitation.ExpiresAt.Format("Jan 02, 2006 at 3:04 PM"))
+	`, invitation.Tenant.Name, invitation.Role.Name, invitationURL, invitation.ExpiresAt.Format("Jan 02, 2006 at 3:04 PM"))
 
 	// Send email based on provider
 	switch h.cfg.Email.Provider {

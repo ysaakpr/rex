@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Users, Loader2, Shield } from 'lucide-react';
+import { Plus, Search, Shield, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -9,60 +9,60 @@ import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Textarea } from '../ui/textarea';
 
-export function RelationsPage() {
-  console.log('[RelationsPage] Component mounted');
+export function PoliciesListTab() {
+  console.log('[PoliciesListTab] Component mounted');
   
   const navigate = useNavigate();
-  const [relations, setRelations] = useState([]);
-  const [filteredRelations, setFilteredRelations] = useState([]);
+  const [policies, setPolicies] = useState([]);
+  const [filteredPolicies, setFilteredPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const [newRelation, setNewRelation] = useState({
+  const [newPolicy, setNewPolicy] = useState({
     name: '',
     description: ''
   });
 
   useEffect(() => {
-    loadRelations();
+    loadPolicies();
   }, []);
 
   useEffect(() => {
-    filterRelations();
-  }, [relations, searchQuery]);
+    filterPolicies();
+  }, [policies, searchQuery]);
 
-  const loadRelations = async () => {
-    console.log('[RelationsPage] Loading relations...');
+  const loadPolicies = async () => {
+    console.log('[PoliciesListTab] Loading policies...');
     try {
       setLoading(true);
       setError('');
       
-      const response = await fetch('/api/v1/platform/relations', {
+      const response = await fetch('/api/v1/platform/policies', {
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to load relations: ${response.status}`);
+        throw new Error(`Failed to load policies: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('[RelationsPage] Relations loaded:', data);
+      console.log('[PoliciesListTab] Policies loaded:', data);
       
-      const relationsArray = data.data || [];
-      setRelations(Array.isArray(relationsArray) ? relationsArray : []);
+      const policiesArray = data.data || [];
+      setPolicies(Array.isArray(policiesArray) ? policiesArray : []);
     } catch (err) {
-      console.error('[RelationsPage] Error loading relations:', err);
+      console.error('[PoliciesListTab] Error loading policies:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterRelations = () => {
-    let filtered = [...relations];
+  const filterPolicies = () => {
+    let filtered = [...policies];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -72,15 +72,15 @@ export function RelationsPage() {
       );
     }
 
-    console.log('[RelationsPage] Filtered relations:', filtered.length, 'from', relations.length);
-    setFilteredRelations(filtered);
+    console.log('[PoliciesListTab] Filtered policies:', filtered.length, 'from', policies.length);
+    setFilteredPolicies(filtered);
   };
 
-  const handleCreateRelation = async () => {
-    console.log('[RelationsPage] Creating relation:', newRelation);
+  const handleCreatePolicy = async () => {
+    console.log('[PoliciesListTab] Creating policy:', newPolicy);
     
-    if (!newRelation.name) {
-      setError('Relation name is required');
+    if (!newPolicy.name) {
+      setError('Policy name is required');
       return;
     }
 
@@ -88,32 +88,32 @@ export function RelationsPage() {
       setCreating(true);
       setError('');
 
-      const response = await fetch('/api/v1/platform/relations', {
+      const response = await fetch('/api/v1/platform/policies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(newRelation)
+        body: JSON.stringify(newPolicy)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create relation');
+        throw new Error(errorData.error || 'Failed to create policy');
       }
 
       const result = await response.json();
-      console.log('[RelationsPage] Relation created successfully:', result);
+      console.log('[PoliciesListTab] Policy created successfully:', result);
       
       setShowCreateDialog(false);
-      setNewRelation({ name: '', description: '' });
+      setNewPolicy({ name: '', description: '' });
       
-      // Navigate to the new relation details page
+      // Navigate to the new policy details page
       if (result.data?.id) {
-        navigate(`/relations/${result.data.id}`);
+        navigate(`/policies/${result.data.id}`);
       } else {
-        loadRelations();
+        loadPolicies();
       }
     } catch (err) {
-      console.error('[RelationsPage] Error creating relation:', err);
+      console.error('[PoliciesListTab] Error creating policy:', err);
       setError(err.message);
     } finally {
       setCreating(false);
@@ -124,7 +124,7 @@ export function RelationsPage() {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading relations...</p>
+        <p className="ml-3 text-muted-foreground">Loading policies...</p>
       </div>
     );
   }
@@ -134,15 +134,29 @@ export function RelationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Relations</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Policies</h1>
           <p className="text-muted-foreground mt-2">
-            Manage tenant member relations and role mappings
+            Manage policies and their permissions
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Relation
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search policies..."
+              value={searchQuery}
+              onChange={(e) => {
+                console.log('[PoliciesListTab] Search query changed:', e.target.value);
+                setSearchQuery(e.target.value);
+              }}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Policy
+          </Button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -154,65 +168,47 @@ export function RelationsPage() {
         </Card>
       )}
 
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search relations..."
-              value={searchQuery}
-              onChange={(e) => {
-                console.log('[RelationsPage] Search query changed:', e.target.value);
-                setSearchQuery(e.target.value);
-              }}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Relations Grid */}
-      {filteredRelations.length === 0 ? (
+      {/* Policies Grid */}
+      {filteredPolicies.length === 0 ? (
         <Card>
           <CardContent className="pt-12 pb-12">
             <div className="text-center text-muted-foreground">
-              <Users className="mx-auto h-12 w-12 mb-4 opacity-50" />
-              <p className="text-sm">No relations found</p>
+              <Shield className="mx-auto h-12 w-12 mb-4 opacity-50" />
+              <p className="text-sm">No policies found</p>
               <p className="text-xs mt-1">
-                {searchQuery ? 'Try adjusting your search' : 'Create your first relation to get started'}
+                {searchQuery ? 'Try adjusting your search' : 'Create your first policy to get started'}
               </p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredRelations.map((relation) => (
+          {filteredPolicies.map((policy) => (
             <Card
-              key={relation.id}
+              key={policy.id}
               className="cursor-pointer hover:border-primary/50 transition-all hover:shadow-md"
               onClick={() => {
-                console.log('[RelationsPage] Relation card clicked:', relation.id);
-                navigate(`/relations/${relation.id}`);
+                console.log('[PoliciesListTab] Policy card clicked:', policy.id);
+                navigate(`/policies/${policy.id}`);
               }}
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <Users className="h-8 w-8 text-primary" />
+                  <Shield className="h-8 w-8 text-primary" />
                   <Badge variant="outline">
-                    {relation.roles?.length || 0} roles
+                    {policy.permissions?.length || 0} permissions
                   </Badge>
                 </div>
-                <CardTitle className="mt-4">{relation.name}</CardTitle>
+                <CardTitle className="mt-4">{policy.name}</CardTitle>
                 <CardDescription className="line-clamp-2">
-                  {relation.description || 'No description'}
+                  {policy.description || 'No description'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center text-sm text-muted-foreground gap-2">
-                  <Shield className="h-4 w-4" />
+                  <Lock className="h-4 w-4" />
                   <span>
-                    {relation.roles?.length || 0} {relation.roles?.length === 1 ? 'role' : 'roles'} assigned
+                    {policy.relations_count || 0} {policy.relations_count === 1 ? 'relation' : 'relations'}
                   </span>
                 </div>
               </CardContent>
@@ -221,33 +217,33 @@ export function RelationsPage() {
         </div>
       )}
 
-      {/* Create Relation Dialog */}
+      {/* Create Policy Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent onClose={() => setShowCreateDialog(false)}>
           <DialogHeader>
-            <DialogTitle>Create Relation</DialogTitle>
+            <DialogTitle>Create Policy</DialogTitle>
             <DialogDescription>
-              Define a new tenant member relation type
+              Define a new policy with permissions
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="relation-name">Relation Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="policy-name">Policy Name <span className="text-red-500">*</span></Label>
               <Input
-                id="relation-name"
-                placeholder="e.g., Contributor"
-                value={newRelation.name}
-                onChange={(e) => setNewRelation(prev => ({ ...prev, name: e.target.value }))}
+                id="policy-name"
+                placeholder="e.g., Content Editor"
+                value={newPolicy.name}
+                onChange={(e) => setNewPolicy(prev => ({ ...prev, name: e.target.value }))}
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="relation-description">Description</Label>
+              <Label htmlFor="policy-description">Description</Label>
               <Textarea
-                id="relation-description"
-                placeholder="Describe this relation type..."
-                value={newRelation.description}
-                onChange={(e) => setNewRelation(prev => ({ ...prev, description: e.target.value }))}
+                id="policy-description"
+                placeholder="Describe what this policy can do..."
+                value={newPolicy.description}
+                onChange={(e) => setNewPolicy(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
               />
             </div>
@@ -256,7 +252,7 @@ export function RelationsPage() {
             <Button variant="outline" onClick={() => setShowCreateDialog(false)} disabled={creating}>
               Cancel
             </Button>
-            <Button onClick={handleCreateRelation} disabled={creating}>
+            <Button onClick={handleCreatePolicy} disabled={creating}>
               {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create & Configure
             </Button>

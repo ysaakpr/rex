@@ -62,9 +62,9 @@ func (s *memberService) AddMember(tenantID uuid.UUID, input *models.AddMemberInp
 		return nil, errors.New("invalid role")
 	}
 
-	// Check if relation belongs to tenant or is system-wide
-	if relation.TenantID != nil && *relation.TenantID != tenantID {
-		return nil, errors.New("relation does not belong to this tenant")
+	// Check if role belongs to tenant or is system-wide
+	if role.TenantID != nil && *role.TenantID != tenantID {
+		return nil, errors.New("role does not belong to this tenant")
 	}
 
 	// Create member
@@ -74,7 +74,7 @@ func (s *memberService) AddMember(tenantID uuid.UUID, input *models.AddMemberInp
 		RoleID:    input.RoleID,
 		Status:    models.MemberStatusActive,
 		InvitedBy: &invitedBy,
-		JoinedAt:   time.Now(),
+		JoinedAt:  time.Now(),
 	}
 
 	if err := s.memberRepo.Create(member); err != nil {

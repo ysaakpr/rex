@@ -54,7 +54,7 @@ function Roles() {
   const loadRoles = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/v1/platform/roles', {
+      const response = await fetch('/api/v1/platform/policies', {
         credentials: 'include'
       });
       
@@ -87,7 +87,7 @@ function Roles() {
   const handleCreateRole = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/v1/platform/roles', {
+      const response = await fetch('/api/v1/platform/policies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -107,7 +107,7 @@ function Roles() {
   const handleUpdateRole = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`/api/v1/platform/roles/${editingRole.id}`, {
+      const response = await fetch(`/api/v1/platform/policies/${editingRole.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -132,7 +132,7 @@ function Roles() {
     if (!confirm('Are you sure you want to delete this role?')) return;
 
     try {
-      const response = await fetch(`/api/v1/platform/roles/${roleId}`, {
+      const response = await fetch(`/api/v1/platform/policies/${roleId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -149,7 +149,7 @@ function Roles() {
     if (!selectedRole) return;
 
     try {
-      const response = await fetch(`/api/v1/platform/roles/${selectedRole.id}/permissions`, {
+      const response = await fetch(`/api/v1/platform/policies/${selectedRole.id}/permissions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -171,7 +171,7 @@ function Roles() {
     if (!confirm('Are you sure you want to revoke this permission?')) return;
 
     try {
-      const response = await fetch(`/api/v1/platform/roles/${roleId}/permissions/${permissionId}`, {
+      const response = await fetch(`/api/v1/platform/policies/${roleId}/permissions/${permissionId}`, {
         method: 'DELETE',
         credentials: 'include'
       });

@@ -13,11 +13,10 @@ import { TenantsPage } from './components/pages/TenantsPage';
 import { ManagedTenantOnboarding } from './components/pages/ManagedTenantOnboarding';
 import { TenantDetailsPage } from './components/pages/TenantDetailsPage';
 import { TenantEditPage } from './components/pages/TenantEditPage';
+import { PoliciesPage } from './components/pages/PoliciesPage';
+import { PolicyDetailsPage } from './components/pages/PolicyDetailsPage';
 import { RolesPage } from './components/pages/RolesPage';
 import { RoleDetailsPage } from './components/pages/RoleDetailsPage';
-import { PermissionsPage } from './components/pages/PermissionsPage';
-import { RelationsPage } from './components/pages/RelationsPage';
-import { RelationDetailsPage } from './components/pages/RelationDetailsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { UserDetailsPage } from './components/pages/UserDetailsPage';
 import { ApplicationsPage } from './components/pages/ApplicationsPage';
@@ -139,6 +138,28 @@ function App() {
           />
           
           <Route
+            path="/permissions"
+            element={
+              <SessionAuth>
+                <ProtectedDashboard>
+                  <PoliciesPage />
+                </ProtectedDashboard>
+              </SessionAuth>
+            }
+          />
+          
+          <Route
+            path="/policies/:id"
+            element={
+              <SessionAuth>
+                <ProtectedDashboard>
+                  <PolicyDetailsPage />
+                </ProtectedDashboard>
+              </SessionAuth>
+            }
+          />
+          
+          <Route
             path="/roles"
             element={
               <SessionAuth>
@@ -155,39 +176,6 @@ function App() {
               <SessionAuth>
                 <ProtectedDashboard>
                   <RoleDetailsPage />
-                </ProtectedDashboard>
-              </SessionAuth>
-            }
-          />
-          
-          <Route
-            path="/permissions"
-            element={
-              <SessionAuth>
-                <ProtectedDashboard>
-                  <PermissionsPage />
-                </ProtectedDashboard>
-              </SessionAuth>
-            }
-          />
-          
-          <Route
-            path="/relations"
-            element={
-              <SessionAuth>
-                <ProtectedDashboard>
-                  <RelationsPage />
-                </ProtectedDashboard>
-              </SessionAuth>
-            }
-          />
-          
-          <Route
-            path="/relations/:id"
-            element={
-              <SessionAuth>
-                <ProtectedDashboard>
-                  <RelationDetailsPage />
                 </ProtectedDashboard>
               </SessionAuth>
             }

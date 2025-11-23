@@ -22,7 +22,7 @@ export function ManagedTenantOnboarding() {
     name: '',
     slug: '',
     ownerEmail: '',
-    relationId: '',
+    roleId: '',
     metadata: {
       industry: '',
       companySize: '',
@@ -69,7 +69,7 @@ export function ManagedTenantOnboarding() {
       if (data.data) {
         const adminRelation = data.data.find(r => r.name.toLowerCase() === 'admin');
         if (adminRelation) {
-          setFormData(prev => ({ ...prev, relationId: adminRelation.id }));
+          setFormData(prev => ({ ...prev, roleId: adminRelation.id }));
         }
       }
     } catch (err) {
@@ -142,7 +142,7 @@ export function ManagedTenantOnboarding() {
     }
 
     // Ensure Admin relation is selected
-    if (!formData.relationId) {
+    if (!formData.roleId) {
       setError('Unable to determine Admin role. Please refresh the page and try again.');
       setLoading(false);
       return;
@@ -182,7 +182,7 @@ export function ManagedTenantOnboarding() {
       // Step 2: Always send invitation (works for both existing and new users)
       const invitationPayload = {
         email: formData.ownerEmail,
-        relation_id: formData.relationId
+        role_id: formData.roleId
       };
 
       const inviteResponse = await fetch(`/api/v1/tenants/${tenantId}/invitations`, {

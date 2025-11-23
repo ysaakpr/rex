@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Plus, X, Loader2, Shield, AlertTriangle, Lock } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, X, Loader2, Shield, AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -8,7 +8,6 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Textarea } from '../ui/textarea';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 
 export function RoleDetailsPage() {
   const { id } = useParams();
@@ -16,15 +15,15 @@ export function RoleDetailsPage() {
   console.log('[RoleDetailsPage] Component mounted with role ID:', id);
   
   const [role, setRole] = useState(null);
-  const [allPermissions, setAllPermissions] = useState([]);
+  const [allPolicies, setAllPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showAddPermissionDialog, setShowAddPermissionDialog] = useState(false);
+  const [showAttachPolicyDialog, setShowAttachPolicyDialog] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [permissionSearch, setPermissionSearch] = useState('');
+  const [policySearch, setPolicySearch] = useState('');
 
   const [editForm, setEditForm] = useState({
     name: '',
@@ -33,7 +32,7 @@ export function RoleDetailsPage() {
 
   useEffect(() => {
     loadRoleDetails();
-    loadAllPermissions();
+    loadAllPolicies();
   }, [id]);
 
   const loadRoleDetails = async () => {
@@ -52,8 +51,6 @@ export function RoleDetailsPage() {
 
       const data = await response.json();
       console.log('[RoleDetailsPage] Role loaded:', data);
-      console.log('[RoleDetailsPage] Role permissions:', data.data?.permissions);
-      console.log('[RoleDetailsPage] Permissions count:', data.data?.permissions?.length || 0);
       
       setRole(data.data);
       setEditForm({
@@ -68,20 +65,20 @@ export function RoleDetailsPage() {
     }
   };
 
-  const loadAllPermissions = async () => {
-    console.log('[RoleDetailsPage] Loading all permissions...');
+  const loadAllPolicies = async () => {
+    console.log('[RoleDetailsPage] Loading all policies...');
     try {
-      const response = await fetch('/api/v1/platform/permissions', {
+      const response = await fetch('/api/v1/platform/policies', {
         credentials: 'include'
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('[RoleDetailsPage] Permissions loaded:', data);
-        setAllPermissions(data.data || []);
+        console.log('[RoleDetailsPage] Policies loaded:', data);
+        setAllPolicies(data.data || []);
       }
     } catch (err) {
-      console.error('[RoleDetailsPage] Error loading permissions:', err);
+      console.error('[RoleDetailsPage] Error loading policies:', err);
     }
   };
 
@@ -110,7 +107,6 @@ export function RoleDetailsPage() {
       }
 
       console.log('[RoleDetailsPage] Role updated successfully');
-      
       setShowEditDialog(false);
       loadRoleDetails();
     } catch (err) {
@@ -123,17 +119,19 @@ export function RoleDetailsPage() {
 
   const handleDeleteRole = async () => {
     console.log('[RoleDetailsPage] Deleting role:', id);
-
+    
     try {
       setDeleting(true);
-      
+      setError('');
+
       const response = await fetch(`/api/v1/platform/roles/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete role');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete role');
       }
 
       console.log('[RoleDetailsPage] Role deleted successfully');
@@ -146,58 +144,61 @@ export function RoleDetailsPage() {
     }
   };
 
-  const handleAddPermission = async (permissionId) => {
-    console.log('[RoleDetailsPage] Adding permission to role:', permissionId);
+  const handleAttachPolicy = async (policyId) => {
+    console.log('[RoleDetailsPage] Attaching policy to role:', policyId);
 
     try {
-      const response = await fetch(`/api/v1/platform/roles/${id}/permissions`, {
+      // Backend expects policy_ids as an array
+      const response = await fetch(`/api/v1/platform/roles/${id}/policies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ permission_id: permissionId })
+        body: JSON.stringify({ policy_ids: [policyId] })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add permission');
+        throw new Error(errorData.error || 'Failed to attach policy');
       }
 
-      console.log('[RoleDetailsPage] Permission added successfully');
+      console.log('[RoleDetailsPage] Policy attached successfully');
+      setShowAttachPolicyDialog(false);
+      setPolicySearch('');
       loadRoleDetails();
     } catch (err) {
-      console.error('[RoleDetailsPage] Error adding permission:', err);
+      console.error('[RoleDetailsPage] Error attaching policy:', err);
       setError(err.message);
     }
   };
 
-  const handleRemovePermission = async (permissionId) => {
-    console.log('[RoleDetailsPage] Removing permission from role:', permissionId);
+  const handleDetachPolicy = async (policyId) => {
+    console.log('[RoleDetailsPage] Detaching policy from role:', policyId);
 
     try {
-      const response = await fetch(`/api/v1/platform/roles/${id}/permissions/${permissionId}`, {
+      const response = await fetch(`/api/v1/platform/roles/${id}/policies/${policyId}`, {
         method: 'DELETE',
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to remove permission');
+        throw new Error('Failed to detach policy');
       }
 
-      console.log('[RoleDetailsPage] Permission removed successfully');
+      console.log('[RoleDetailsPage] Policy detached successfully');
       loadRoleDetails();
     } catch (err) {
-      console.error('[RoleDetailsPage] Error removing permission:', err);
+      console.error('[RoleDetailsPage] Error detaching policy:', err);
       setError(err.message);
     }
   };
 
-  const getAvailablePermissions = () => {
-    const rolePermissionIds = new Set((role?.permissions || []).map(p => p.id));
-    return allPermissions.filter(p => !rolePermissionIds.has(p.id));
+  const getAvailablePolicies = () => {
+    const rolePolicyIds = new Set((role?.policies || []).map(p => p.id));
+    return allPolicies.filter(p => !rolePolicyIds.has(p.id));
   };
 
-  const filteredAvailablePermissions = getAvailablePermissions().filter(p =>
-    (p.key || `${p.service}:${p.entity}:${p.action}`)?.toLowerCase().includes(permissionSearch.toLowerCase())
+  const filteredAvailablePolicies = getAvailablePolicies().filter(p =>
+    p.name?.toLowerCase().includes(policySearch.toLowerCase())
   );
 
   if (loading) {
@@ -231,6 +232,9 @@ export function RoleDetailsPage() {
             <div className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
               <h1 className="text-3xl font-bold tracking-tight">{role.name}</h1>
+              {role.is_system && (
+                <Badge variant="secondary">System</Badge>
+              )}
             </div>
             <p className="text-muted-foreground mt-2">
               {role.description || 'No description'}
@@ -249,232 +253,227 @@ export function RoleDetailsPage() {
         </div>
       </div>
 
-      {/* Error Message */}
+      {/* Error Display */}
       {error && (
         <Card className="border-destructive">
           <CardContent className="pt-6">
-            <p className="text-sm text-destructive">{error}</p>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+              <div>
+                <p className="font-medium text-destructive">Error</p>
+                <p className="text-sm text-destructive/80">{error}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="permissions">
-        <TabsList>
-          <TabsTrigger value="permissions">
-            Permissions ({role.permissions?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="relations">
-            Relations ({role.relations_count || 0})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="permissions">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Assigned Permissions</CardTitle>
-                  <CardDescription>
-                    Permissions granted by this role
-                  </CardDescription>
-                </div>
-                <Button onClick={() => setShowAddPermissionDialog(true)} size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Permission
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {!role.permissions || !Array.isArray(role.permissions) || role.permissions.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Lock className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                  <p className="text-sm">No permissions assigned yet</p>
-                  <p className="text-xs mt-1">Add permissions to define what this role can do</p>
-                  {role.permissions && !Array.isArray(role.permissions) && (
-                    <p className="text-xs text-destructive mt-2">
-                      Debug: permissions is not an array - {typeof role.permissions}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {role.permissions.map((permission) => (
-                    <div
-                      key={permission.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <p className="font-mono text-sm">
-                          {permission.key || `${permission.service}:${permission.entity}:${permission.action}`}
-                        </p>
-                        {permission.description && (
-                          <p className="text-xs text-muted-foreground mt-1">{permission.description}</p>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemovePermission(permission.id)}
-                      >
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="relations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Mapped Relations</CardTitle>
+      {/* Attached Policies Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Attached Policies</CardTitle>
               <CardDescription>
-                Relations that automatically grant this role
+                Policies that grant permissions to this role
               </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Lock className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p className="text-sm">Relation mapping managed from Relations page</p>
-                <p className="text-xs mt-1">
-                  {role.relations_count || 0} {role.relations_count === 1 ? 'relation' : 'relations'} mapped
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </div>
+            <Button onClick={() => setShowAttachPolicyDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Attach Policy
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {role.policies && role.policies.length > 0 ? (
+            <div className="space-y-2">
+              {role.policies.map(policy => (
+                <div
+                  key={policy.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="font-medium">{policy.name}</h3>
+                      {policy.is_system && (
+                        <Badge variant="secondary" className="text-xs">System</Badge>
+                      )}
+                    </div>
+                    {policy.description && (
+                      <p className="text-sm text-muted-foreground mt-1 ml-6">
+                        {policy.description}
+                      </p>
+                    )}
+                    {policy.permissions && policy.permissions.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2 ml-6">
+                        {policy.permissions.length} permission(s)
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDetachPolicy(policy.id)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Shield className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No policies attached</p>
+              <p className="text-sm mt-1">Click "Attach Policy" to add policies to this role</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Edit Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent onClose={() => setShowEditDialog(false)}>
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Role</DialogTitle>
             <DialogDescription>
-              Update role information
+              Update the role name and description
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Role Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="name">Role Name</Label>
               <Input
-                id="edit-name"
+                id="name"
                 value={editForm.name}
-                onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="Enter role name"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
-                id="edit-description"
+                id="description"
                 value={editForm.description}
-                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="Enter role description"
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={updating}>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleUpdateRole} disabled={updating}>
-              {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+              {updating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Role'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent onClose={() => setShowDeleteDialog(false)}>
+        <DialogContent>
           <DialogHeader>
-            <div className="flex items-center justify-center mb-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-                <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-            <DialogTitle className="text-center">Delete Role?</DialogTitle>
-            <DialogDescription className="text-center">
-              Are you sure you want to delete <strong>{role.name}</strong>?
-              <br />
-              <span className="text-red-600 dark:text-red-400 font-semibold mt-2 block">
-                This will remove it from all relations.
-              </span>
+            <DialogTitle>Delete Role</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this role? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">Warning</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Deleting this role will affect all users currently assigned to it.
+              </p>
+            </div>
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={deleting}>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteRole} disabled={deleting}>
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Role'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Add Permission Dialog */}
-      <Dialog open={showAddPermissionDialog} onOpenChange={setShowAddPermissionDialog}>
-        <DialogContent onClose={() => setShowAddPermissionDialog(false)} className="max-w-2xl">
+      {/* Attach Policy Dialog */}
+      <Dialog open={showAttachPolicyDialog} onOpenChange={setShowAttachPolicyDialog}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Add Permission</DialogTitle>
+            <DialogTitle>Attach Policy</DialogTitle>
             <DialogDescription>
-              Select permissions to add to this role
+              Select a policy to attach to this role
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Input
-              placeholder="Search permissions..."
-              value={permissionSearch}
-              onChange={(e) => setPermissionSearch(e.target.value)}
-            />
-            <div className="max-h-96 overflow-y-auto space-y-2">
-              {filteredAvailablePermissions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
-                  {getAvailablePermissions().length === 0
-                    ? 'All available permissions are already assigned'
-                    : 'No permissions found matching your search'}
+            <div className="space-y-2">
+              <Label htmlFor="policy-search">Search Policies</Label>
+              <Input
+                id="policy-search"
+                placeholder="Search by policy name..."
+                value={policySearch}
+                onChange={(e) => setPolicySearch(e.target.value)}
+              />
+            </div>
+            <div className="border rounded-lg max-h-[400px] overflow-y-auto">
+              {filteredAvailablePolicies.length > 0 ? (
+                <div className="divide-y">
+                  {filteredAvailablePolicies.map(policy => (
+                    <button
+                      key={policy.id}
+                      onClick={() => handleAttachPolicy(policy.id)}
+                      className="w-full p-4 text-left hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        <h3 className="font-medium">{policy.name}</h3>
+                        {policy.is_system && (
+                          <Badge variant="secondary" className="text-xs">System</Badge>
+                        )}
+                      </div>
+                      {policy.description && (
+                        <p className="text-sm text-muted-foreground mt-1 ml-6">
+                          {policy.description}
+                        </p>
+                      )}
+                    </button>
+                  ))}
                 </div>
               ) : (
-                filteredAvailablePermissions.map((permission) => (
-                  <div
-                    key={permission.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
-                  >
-                    <div className="flex-1">
-                      <span className="font-mono text-sm">
-                        {permission.key || `${permission.service}:${permission.entity}:${permission.action}`}
-                      </span>
-                      {permission.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{permission.description}</p>
-                      )}
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        handleAddPermission(permission.id);
-                        setShowAddPermissionDialog(false);
-                        setPermissionSearch('');
-                      }}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                ))
+                <div className="p-8 text-center text-muted-foreground">
+                  <Shield className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No available policies found</p>
+                  <p className="text-sm mt-1">All policies are already attached to this role</p>
+                </div>
               )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
-              setShowAddPermissionDialog(false);
-              setPermissionSearch('');
+              setShowAttachPolicyDialog(false);
+              setPolicySearch('');
             }}>
-              Close
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -482,4 +481,3 @@ export function RoleDetailsPage() {
     </div>
   );
 }
-

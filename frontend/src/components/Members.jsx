@@ -11,7 +11,7 @@ function Members() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
-  const [newMember, setNewMember] = useState({ user_id: '', relation_id: '' });
+  const [newMember, setNewMember] = useState({ user_id: '', role_id: '' });
 
   useEffect(() => {
     loadMembers();
@@ -39,7 +39,7 @@ function Members() {
 
   const loadRelations = async () => {
     try {
-      const response = await fetch(`/api/v1/relations`, {
+      const response = await fetch(`/api/v1/roles`, {
         credentials: 'include'
       });
       
@@ -66,7 +66,7 @@ function Members() {
       if (!response.ok) throw new Error('Failed to add member');
 
       setShowAddModal(false);
-      setNewMember({ user_id: '', relation_id: '' });
+      setNewMember({ user_id: '', role_id: '' });
       loadMembers();
     } catch (err) {
       setError(err.message);
@@ -80,7 +80,7 @@ function Members() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ relation_id: selectedMember.relation_id })
+        body: JSON.stringify({ role_id: selectedMember.role_id })
       });
 
       if (!response.ok) throw new Error('Failed to update member');
@@ -229,8 +229,8 @@ function Members() {
               <div className="form-group">
                 <label>Relation *</label>
                 <select
-                  value={newMember.relation_id}
-                  onChange={(e) => setNewMember({ ...newMember, relation_id: e.target.value })}
+                  value={newMember.role_id}
+                  onChange={(e) => setNewMember({ ...newMember, role_id: e.target.value })}
                   required
                 >
                   <option value="">Select relation...</option>
@@ -272,8 +272,8 @@ function Members() {
               <div className="form-group">
                 <label>Relation *</label>
                 <select
-                  value={selectedMember.relation_id}
-                  onChange={(e) => setSelectedMember({ ...selectedMember, relation_id: e.target.value })}
+                  value={selectedMember.role_id}
+                  onChange={(e) => setSelectedMember({ ...selectedMember, role_id: e.target.value })}
                   required
                 >
                   {relations.map(relation => (

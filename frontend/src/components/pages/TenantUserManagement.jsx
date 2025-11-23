@@ -14,8 +14,8 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   const [loading, setLoading] = useState(true);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
-  const [addMemberData, setAddMemberData] = useState({ userId: '', relationId: '' });
-  const [inviteData, setInviteData] = useState({ email: '', relationId: '' });
+  const [addMemberData, setAddMemberData] = useState({ userId: '', roleId: '' });
+  const [inviteData, setInviteData] = useState({ email: '', roleId: '' });
   const [copiedText, setCopiedText] = useState(''); // Track which text was copied
 
   useEffect(() => {
@@ -96,7 +96,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   };
 
   const handleAddMember = async () => {
-    if (!addMemberData.userId || !addMemberData.relationId) {
+    if (!addMemberData.userId || !addMemberData.roleId) {
       alert('Please fill in all fields');
       return;
     }
@@ -108,7 +108,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
         credentials: 'include',
         body: JSON.stringify({
           user_id: addMemberData.userId,
-          relation_id: addMemberData.relationId
+          role_id: addMemberData.roleId
         })
       });
 
@@ -117,7 +117,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
       }
 
       setShowAddDialog(false);
-      setAddMemberData({ userId: '', relationId: '' });
+      setAddMemberData({ userId: '', roleId: '' });
       loadData();
       if (onMembersUpdate) onMembersUpdate();
     } catch (err) {
@@ -127,7 +127,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   };
 
   const handleSendInvite = async () => {
-    if (!inviteData.email || !inviteData.relationId) {
+    if (!inviteData.email || !inviteData.roleId) {
       alert('Please fill in all fields');
       return;
     }
@@ -139,7 +139,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
         credentials: 'include',
         body: JSON.stringify({
           email: inviteData.email,
-          relation_id: inviteData.relationId
+          role_id: inviteData.roleId
         })
       });
 
@@ -148,7 +148,7 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
       }
 
       setShowInviteDialog(false);
-      setInviteData({ email: '', relationId: '' });
+      setInviteData({ email: '', roleId: '' });
       alert('Invitation sent successfully!');
     } catch (err) {
       console.error('Error sending invitation:', err);
@@ -330,11 +330,11 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="relationId">Relation/Role</Label>
+              <Label htmlFor="roleId">Relation/Role</Label>
               <select
-                id="relationId"
-                value={addMemberData.relationId}
-                onChange={(e) => setAddMemberData(prev => ({ ...prev, relationId: e.target.value }))}
+                id="roleId"
+                value={addMemberData.roleId}
+                onChange={(e) => setAddMemberData(prev => ({ ...prev, roleId: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="">Select a relation</option>
@@ -381,8 +381,8 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
               <Label htmlFor="inviteRelationId">Relation/Role</Label>
               <select
                 id="inviteRelationId"
-                value={inviteData.relationId}
-                onChange={(e) => setInviteData(prev => ({ ...prev, relationId: e.target.value }))}
+                value={inviteData.roleId}
+                onChange={(e) => setInviteData(prev => ({ ...prev, roleId: e.target.value }))}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <option value="">Select a relation</option>
