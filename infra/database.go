@@ -42,7 +42,7 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 		ClusterIdentifier:   pulumi.String(fmt.Sprintf("%s-%s-aurora-cluster", projectName, environment)),
 		Engine:              pulumi.String("aurora-postgresql"),
 		EngineMode:          pulumi.String("provisioned"),
-		EngineVersion:       pulumi.String("15.5"), // Updated to more widely available version
+		EngineVersion:       pulumi.String("14.10"), // PostgreSQL 14 - most stable for Serverless v2
 		DatabaseName:        pulumi.String(mainDBName),
 		MasterUsername:      pulumi.String(masterUsername),
 		MasterPassword:      masterPassword,
@@ -84,7 +84,7 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 		ClusterIdentifier:  cluster.ID(),
 		InstanceClass:      pulumi.String("db.serverless"),
 		Engine:             pulumi.String("aurora-postgresql"),
-		EngineVersion:      pulumi.String("15.5"), // Match cluster version
+		EngineVersion:      pulumi.String("14.10"), // Match cluster version
 		PubliclyAccessible: pulumi.Bool(false),
 		Tags: pulumi.StringMap{
 			"Name":        pulumi.String(fmt.Sprintf("%s-%s-aurora-instance-1", projectName, environment)),

@@ -20,12 +20,15 @@ command -v aws >/dev/null 2>&1 || { echo -e "${RED}Error: aws CLI is not install
 command -v pulumi >/dev/null 2>&1 || { echo -e "${RED}Error: pulumi is not installed${NC}" >&2; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo -e "${RED}Error: jq is not installed${NC}" >&2; exit 1; }
 
-# Get ECR repository URLs from Pulumi outputs
-cd "$(dirname "$0")/.."
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo -e "${YELLOW}Getting ECR repository URLs from Pulumi...${NC}"
-API_REPO=$(pulumi stack output apiRepositoryUrl)
-WORKER_REPO=$(pulumi stack output workerRepositoryUrl)
+cd "$INFRA_DIR"
+API_REPO=$(pulumi stack output apiRepositoryUrl 2>/dev/null)
+WORKER_REPO=$(pulumi stack output workerRepositoryUrl 2>/dev/null)
 
 if [ -z "$API_REPO" ] || [ -z "$WORKER_REPO" ]; then
     echo -e "${RED}Error: Could not get repository URLs. Make sure infrastructure is deployed.${NC}"
@@ -40,7 +43,7 @@ echo -e "${YELLOW}Note: Frontend is deployed via AWS Amplify (not ECR)${NC}"
 echo ""
 
 # Get AWS account and region
-AWS_REGION=$(pulumi config get aws:region)
+AWS_REGION=$(pulumi config get aws:region 2>/dev/null || echo "ap-south-1")
 AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
 # Login to ECR
@@ -51,7 +54,17 @@ echo -e "${GREEN}✓ Logged in to ECR${NC}"
 echo ""
 
 # Navigate to project root
-cd ../..
+cd "$PROJECT_ROOT"
+echo "Building from: $(pwd)"
+echo ""
+
+# Check if Dockerfile.prod exists
+if [ ! -f "Dockerfile.prod" ]; then
+    echo -e "${RED}Error: Dockerfile.prod not found in $(pwd)${NC}"
+    echo "Available Dockerfiles:"
+    ls -la Dockerfile* 2>/dev/null || echo "  No Dockerfiles found"
+    exit 1
+fi
 
 # Build API image
 echo -e "${YELLOW}Building API image...${NC}"

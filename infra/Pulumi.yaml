@@ -47,4 +47,12 @@ config:
   rex-backend:githubToken:
     description: GitHub personal access token (required for private repos, optional for public repos)
     default: ""
+  
+  rex-backend:lowcost:
+    description: Enable low-cost mode (uses EC2 Spot instance with self-hosted PostgreSQL/Redis instead of RDS/ElastiCache)
+    default: "false"
+  
+  rex-backend:allinone:
+    description: Enable all-in-one mode (single EC2 Spot instance running everything in Docker Compose - cheapest option)
+    default: "true"
 

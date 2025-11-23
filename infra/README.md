@@ -70,6 +70,30 @@ This directory contains the Pulumi infrastructure-as-code (IaC) for deploying th
    - Amplify Console for frontend logs and build status
    - 7-day log retention (configurable)
 
+## Deployment Modes
+
+### Standard Mode (Default)
+Uses fully managed AWS services for production-ready deployments:
+- **RDS Aurora Serverless v2**: Managed PostgreSQL with auto-scaling
+- **ElastiCache**: Managed Redis cluster
+- **High Availability**: Multi-AZ support, automated backups, automatic failover
+- **Cost**: ~$65-130/month for database services
+
+### Low-Cost Mode 🆕
+Perfect for development, testing, and staging environments:
+- **Single EC2 Spot Instance**: Self-hosted PostgreSQL + Redis on one instance
+- **Instance Type**: t3a.small (2 vCPU, 2 GB RAM)
+- **Ultra-low Cost**: ~$5-10/month for database services (85-90% savings!)
+- **Automatic Setup**: Fully automated installation and configuration
+- **Trade-offs**: No high availability, potential spot interruptions
+
+**Enable low-cost mode:**
+```bash
+pulumi config set rex-backend:lowcost true
+```
+
+**📖 See [LOWCOST_MODE.md](./LOWCOST_MODE.md) for complete documentation.**
+
 ## Prerequisites
 
 ### Local Tools
@@ -530,7 +554,17 @@ Create CloudWatch Alarms for:
 
 ## Cost Optimization
 
-### Development Environment
+### Ultra Low-Cost Mode 💰
+
+**Best for dev/test/staging environments:**
+```bash
+pulumi config set rex-backend:lowcost true
+```
+- Saves 85-90% on database costs (~$5-10/month vs ~$65-130/month)
+- Uses single EC2 Spot instance for PostgreSQL + Redis
+- See [LOWCOST_MODE.md](./LOWCOST_MODE.md) for details
+
+### Development Environment (Standard Mode)
 
 - Aurora Serverless scales to 0.5 ACU when idle
 - Use smallest Redis node (cache.t4g.micro)

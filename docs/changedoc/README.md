@@ -152,6 +152,20 @@ This folder contains documentation created during the implementation and testing
 - Build configuration and environment variables
 - Testing and rollback procedures
 
+### 17-ALLINONE_ADMIN_INIT.md
+**Created**: November 23, 2025  
+**Purpose**: Automatic platform admin initialization for all-in-one deployments  
+**Content**:
+- Automatic default admin user creation (admin@platform.local)
+- SuperTokens Core API integration for user creation
+- Health check and error handling implementation
+- Idempotent initialization script design
+- Security best practices and password change guidance
+- Troubleshooting procedures
+- Frontend deployment clarification (Amplify not auto-deployed)
+- Manual frontend hosting options (Amplify Console, Vercel, Netlify, Docker)
+- Comprehensive admin initialization documentation
+
 ## Reading Order
 
 ### For New Users
@@ -183,6 +197,7 @@ This folder contains documentation created during the implementation and testing
 5. **Final Integration** → Summarized entire implementation
 6. **AWS Deployment** → Complete Pulumi infrastructure for production
 7. **Amplify Migration** → Optimized frontend deployment with AWS Amplify
+8. **All-in-One Enhancement** → Automatic platform admin initialization for simplified deployment
 
 ## Document Updates
 
