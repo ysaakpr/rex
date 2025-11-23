@@ -109,6 +109,32 @@ func (h *InvitationHandler) ListInvitations(c *gin.Context) {
 	response.OK(c, result)
 }
 
+// GetInvitationByToken godoc
+// @Summary Get invitation details by token
+// @Tags invitations
+// @Produce json
+// @Param token path string true "Invitation Token"
+// @Success 200 {object} response.Response{data=models.InvitationResponse}
+// @Router /invitations/{token} [get]
+func (h *InvitationHandler) GetInvitationByToken(c *gin.Context) {
+	token := c.Param("token")
+
+	invitation, err := h.invitationService.GetInvitationByToken(token)
+	if err != nil {
+		errMsg := err.Error()
+		// Return 400 for invalid invitation states (already accepted, expired, cancelled)
+		// Return 404 only for truly not found
+		if errMsg == "invitation not found" {
+			response.NotFound(c, errMsg)
+		} else {
+			response.BadRequest(c, err)
+		}
+		return
+	}
+
+	response.OK(c, invitation.ToResponse())
+}
+
 // AcceptInvitation godoc
 // @Summary Accept invitation
 // @Tags invitations
@@ -125,13 +151,58 @@ func (h *InvitationHandler) AcceptInvitation(c *gin.Context) {
 		return
 	}
 
-	member, err := h.invitationService.AcceptInvitation(token, userID)
+	// Get user email to validate against invitation
+	userEmail, err := middleware.GetUserEmail(c)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+
+	member, err := h.invitationService.AcceptInvitation(token, userID, userEmail)
 	if err != nil {
 		response.BadRequest(c, err)
 		return
 	}
 
 	response.OK(c, member.ToResponse())
+}
+
+// CheckPendingInvitations godoc
+// @Summary Check and auto-accept pending invitations for current user
+// @Tags invitations
+// @Produce json
+// @Success 200 {object} response.Response{data=[]models.MemberResponse}
+// @Router /invitations/check-pending [post]
+func (h *InvitationHandler) CheckPendingInvitations(c *gin.Context) {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	// Get user email from SuperTokens
+	email, err := middleware.GetUserEmail(c)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+
+	members, err := h.invitationService.CheckAndAcceptPendingInvitations(email, userID)
+	if err != nil {
+		response.InternalServerError(c, err)
+		return
+	}
+
+	// Convert to response format
+	memberResponses := make([]*models.MemberResponse, len(members))
+	for i, member := range members {
+		memberResponses[i] = member.ToResponse()
+	}
+
+	response.OK(c, gin.H{
+		"accepted_count": len(members),
+		"memberships":    memberResponses,
+	})
 }
 
 // CancelInvitation godoc

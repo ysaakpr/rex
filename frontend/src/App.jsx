@@ -20,6 +20,7 @@ import { RoleDetailsPage } from './components/pages/RoleDetailsPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { UserDetailsPage } from './components/pages/UserDetailsPage';
 import { ApplicationsPage } from './components/pages/ApplicationsPage';
+import { AcceptInvitationPage } from './components/pages/AcceptInvitationPage';
 import './index.css';
 
 // SuperTokens configuration
@@ -46,6 +47,7 @@ function ProtectedDashboard({ children }) {
 
   useEffect(() => {
     checkPlatformAdmin();
+    checkAndAcceptPendingInvitations();
   }, []);
 
   const checkPlatformAdmin = async () => {
@@ -63,6 +65,28 @@ function ProtectedDashboard({ children }) {
       setIsPlatformAdmin(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkAndAcceptPendingInvitations = async () => {
+    try {
+      // This endpoint will check if the user's email has any pending invitations
+      // and automatically accept them
+      const response = await fetch('/api/v1/invitations/check-pending', {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.data?.accepted_count > 0) {
+          console.log(`Auto-accepted ${data.data.accepted_count} pending invitation(s)`);
+          // Optionally show a notification to the user
+        }
+      }
+    } catch (err) {
+      // Silent fail - this is a background check
+      console.error('Error checking pending invitations:', err);
     }
   };
 
@@ -91,6 +115,16 @@ function App() {
         <Routes>
           {/* SuperTokens auth routes */}
           {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [EmailPasswordPreBuiltUI])}
+          
+          {/* Public invitation routes - accessible before authentication */}
+          <Route
+            path="/invitations/:token/accept"
+            element={<AcceptInvitationPage />}
+          />
+          <Route
+            path="/accept-invite"
+            element={<AcceptInvitationPage />}
+          />
           
           {/* Protected routes - require authentication + platform admin */}
           <Route

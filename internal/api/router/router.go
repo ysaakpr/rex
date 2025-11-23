@@ -43,8 +43,8 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
-		// Public routes (optional auth for checking pending invitations)
-		v1.GET("/invitations/:token/accept", deps.InvitationHandler.AcceptInvitation)
+		// Public routes - invitation details can be viewed before authentication
+		v1.GET("/invitations/:token", deps.InvitationHandler.GetInvitationByToken)
 
 		// Protected routes (require authentication)
 		auth := v1.Group("")
@@ -86,12 +86,14 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 			invitations := auth.Group("/invitations")
 			{
 				invitations.POST("/:token/accept", deps.InvitationHandler.AcceptInvitation)
+				invitations.POST("/check-pending", deps.InvitationHandler.CheckPendingInvitations)
 				invitations.DELETE("/:id", deps.InvitationHandler.CancelInvitation)
 			}
 
 			// User routes (for fetching user details)
 			users := auth.Group("/users")
 			{
+				users.GET("/me", deps.UserHandler.GetCurrentUser)
 				users.GET("", deps.UserHandler.ListUsers)
 				users.GET("/search", deps.UserHandler.SearchUsers)
 				users.GET("/:user_id", deps.UserHandler.GetUserDetails)

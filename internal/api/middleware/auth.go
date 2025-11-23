@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
 	"github.com/supertokens/supertokens-golang/supertokens"
@@ -74,6 +75,26 @@ func GetUserID(c *gin.Context) (string, error) {
 	}
 
 	return userIDStr, nil
+}
+
+// GetUserEmail fetches the user's email from SuperTokens
+func GetUserEmail(c *gin.Context) (string, error) {
+	userID, err := GetUserID(c)
+	if err != nil {
+		return "", err
+	}
+
+	// Get user info from SuperTokens
+	userInfo, err := emailpassword.GetUserByID(userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user info: %w", err)
+	}
+
+	if userInfo == nil {
+		return "", fmt.Errorf("user not found")
+	}
+
+	return userInfo.Email, nil
 }
 
 // GetSession returns the SuperTokens session from context

@@ -45,6 +45,7 @@ type CreateInvitationInput struct {
 type InvitationResponse struct {
 	ID         uuid.UUID        `json:"id"`
 	TenantID   uuid.UUID        `json:"tenant_id"`
+	Tenant     *TenantResponse  `json:"tenant,omitempty"`
 	Email      string           `json:"email"`
 	InvitedBy  string           `json:"invited_by"`
 	RoleID     uuid.UUID        `json:"role_id"`
@@ -70,6 +71,10 @@ func (inv *UserInvitation) ToResponse() *InvitationResponse {
 
 	if inv.Role.ID != uuid.Nil {
 		resp.Role = inv.Role.ToResponse()
+	}
+
+	if inv.Tenant.ID != uuid.Nil {
+		resp.Tenant = inv.Tenant.ToResponse()
 	}
 
 	return resp

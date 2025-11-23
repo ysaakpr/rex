@@ -18,8 +18,9 @@ import (
 type InvitationService interface {
 	CreateInvitation(tenantID uuid.UUID, input *models.CreateInvitationInput, invitedBy string) (*models.UserInvitation, error)
 	GetInvitation(id uuid.UUID) (*models.UserInvitation, error)
+	GetInvitationByToken(token string) (*models.UserInvitation, error)
 	GetTenantInvitations(tenantID uuid.UUID, pagination *models.PaginationParams) ([]*models.UserInvitation, int64, error)
-	AcceptInvitation(token string, userID string) (*models.TenantMember, error)
+	AcceptInvitation(token string, userID string, userEmail string) (*models.TenantMember, error)
 	CancelInvitation(id uuid.UUID) error
 	CheckAndAcceptPendingInvitations(email string, userID string) ([]*models.TenantMember, error)
 }
@@ -117,11 +118,38 @@ func (s *invitationService) GetInvitation(id uuid.UUID) (*models.UserInvitation,
 	return invitation, nil
 }
 
+func (s *invitationService) GetInvitationByToken(token string) (*models.UserInvitation, error) {
+	invitation, err := s.invitationRepo.GetByToken(token)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("invitation not found")
+		}
+		return nil, err
+	}
+
+	// Check if invitation is already accepted
+	if invitation.Status == models.InvitationStatusAccepted {
+		return nil, errors.New("invitation has already been accepted")
+	}
+
+	// Check if invitation is expired
+	if invitation.IsExpired() {
+		return nil, errors.New("invitation has expired")
+	}
+
+	// Check if invitation is cancelled
+	if invitation.Status == models.InvitationStatusCancelled {
+		return nil, errors.New("invitation has been cancelled")
+	}
+
+	return invitation, nil
+}
+
 func (s *invitationService) GetTenantInvitations(tenantID uuid.UUID, pagination *models.PaginationParams) ([]*models.UserInvitation, int64, error) {
 	return s.invitationRepo.GetByTenantID(tenantID, pagination)
 }
 
-func (s *invitationService) AcceptInvitation(token string, userID string) (*models.TenantMember, error) {
+func (s *invitationService) AcceptInvitation(token string, userID string, userEmail string) (*models.TenantMember, error) {
 	// Get invitation by token
 	invitation, err := s.invitationRepo.GetByToken(token)
 	if err != nil {
@@ -134,6 +162,11 @@ func (s *invitationService) AcceptInvitation(token string, userID string) (*mode
 	// Check if invitation can be accepted
 	if !invitation.CanAccept() {
 		return nil, errors.New("invitation cannot be accepted (expired or already used)")
+	}
+
+	// SECURITY: Verify that the logged-in user's email matches the invitation email
+	if invitation.Email != userEmail {
+		return nil, errors.New("this invitation was sent to a different email address")
 	}
 
 	// Check if user is already a member
@@ -201,7 +234,7 @@ func (s *invitationService) CheckAndAcceptPendingInvitations(email string, userI
 	var members []*models.TenantMember
 	for _, invitation := range invitations {
 		if invitation.CanAccept() {
-			member, err := s.AcceptInvitation(invitation.Token, userID)
+			member, err := s.AcceptInvitation(invitation.Token, userID, email)
 			if err != nil {
 				fmt.Printf("failed to auto-accept invitation %s: %v\n", invitation.ID, err)
 				continue

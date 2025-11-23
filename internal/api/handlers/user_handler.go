@@ -36,6 +36,68 @@ type UserDetailsResponse struct {
 	IsSystem    bool   `json:"is_system"`
 }
 
+// GetCurrentUser godoc
+// @Summary Get current logged-in user details
+// @Description Fetches the current user's information from SuperTokens session
+// @Tags users
+// @Produce json
+// @Success 200 {object} response.Response{data=UserDetailsResponse}
+// @Failure 401 {object} response.Response
+// @Failure 500 {object} response.Response
+// @Router /api/v1/users/me [get]
+func (h *UserHandler) GetCurrentUser(c *gin.Context) {
+	// Get userID from middleware
+	userIDValue, exists := c.Get("userID")
+	if !exists {
+		response.Unauthorized(c, "User not authenticated")
+		return
+	}
+
+	userID, ok := userIDValue.(string)
+	if !ok {
+		response.InternalServerError(c, errors.New("invalid user ID format"))
+		return
+	}
+
+	// Fetch user from SuperTokens
+	userInfo, err := emailpassword.GetUserByID(userID)
+	if err != nil {
+		h.logger.Error("Failed to fetch user from SuperTokens",
+			zap.String("user_id", userID),
+			zap.Error(err))
+		response.InternalServerError(c, errors.New("failed to fetch user information"))
+		return
+	}
+
+	if userInfo == nil {
+		response.NotFound(c, "User not found")
+		return
+	}
+
+	// Count tenant memberships
+	var tenantCount int64
+	if err := h.db.Table("tenant_members").
+		Where("user_id = ? AND status = 'active'", userID).
+		Count(&tenantCount).Error; err != nil {
+		h.logger.Error("Failed to count tenant memberships",
+			zap.String("user_id", userID),
+			zap.Error(err))
+		// Don't fail the request, just set to 0
+		tenantCount = 0
+	}
+
+	userDetails := UserDetailsResponse{
+		ID:          userID,
+		UserID:      userID,
+		Email:       userInfo.Email,
+		IsActive:    true,
+		TenantCount: int(tenantCount),
+		IsSystem:    false,
+	}
+
+	response.OK(c, userDetails)
+}
+
 // GetUserDetails godoc
 // @Summary Get user details by user ID
 // @Description Fetches basic user information (email, name) from SuperTokens by user ID
