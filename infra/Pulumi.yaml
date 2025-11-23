@@ -1,0 +1,41 @@
+name: utm-backend
+runtime: go
+description: UTM Backend Infrastructure on AWS
+
+config:
+  aws:region:
+    description: AWS region
+    default: us-east-1
+  
+  utm-backend:projectName:
+    description: Project name used for resource naming
+    default: utm-backend
+  
+  utm-backend:environment:
+    description: Environment (dev, staging, production)
+    default: dev
+  
+  utm-backend:vpcCidr:
+    description: VPC CIDR block
+    default: 10.0.0.0/16
+  
+  utm-backend:dbMasterUsername:
+    description: Database master username
+    default: utmadmin
+  
+  utm-backend:dbMasterPassword:
+    description: Database master password
+    secret: true
+  
+  utm-backend:supertokensApiKey:
+    description: SuperTokens API key
+    secret: true
+  
+  utm-backend:domainName:
+    description: Domain name for the application (optional)
+    default: ""
+  
+  utm-backend:certificateArn:
+    description: ACM certificate ARN for HTTPS (optional)
+    default: ""
+

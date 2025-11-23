@@ -1,0 +1,69 @@
+# Production Dockerfile for API and Worker services
+FROM golang:1.23-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set working directory
+WORKDIR /build
+
+# Copy go mod files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the migration binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o migrate cmd/migrate/main.go
+
+# Build the API binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o api cmd/api/main.go
+
+# Build the Worker binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o worker cmd/worker/main.go
+
+# Final stage for API
+FROM alpine:latest AS api
+
+RUN apk --no-cache add ca-certificates tzdata wget
+
+WORKDIR /app
+
+# Copy binaries
+COPY --from=builder /build/api .
+COPY --from=builder /build/migrate .
+
+# Copy migrations
+COPY migrations /app/migrations
+
+# Create non-root user
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 8080
+
+CMD ["./api"]
+
+# Final stage for Worker
+FROM alpine:latest AS worker
+
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /app
+
+# Copy binaries
+COPY --from=builder /build/worker .
+
+# Create non-root user
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+CMD ["./worker"]
+

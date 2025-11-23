@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cookie Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { padding: 10px 20px; margin: 5px; font-size: 16px; cursor: pointer; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        h1 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>🍪 SuperTokens Cookie Inspector</h1>
+    <div>
+        <button onclick="checkCookies()">Check Cookies</button>
+        <button onclick="testAuth()">Test Auth Endpoint</button>
+        <button onclick="testAPI()">Test API Endpoint</button>
+        <button onclick="clearCookies()">Clear All Cookies</button>
+    </div>
+    <pre id="output">Click a button to test...</pre>
+
+    <script>
+        function checkCookies() {
+            const cookies = document.cookie;
+            const output = document.getElementById('output');
+            
+            if (!cookies) {
+                output.textContent = '❌ No cookies found!\n\nThis means SuperTokens cookies are either:\n1. Not being set\n2. HttpOnly (cant access via JavaScript)\n3. Wrong domain/path';
+                return;
+            }
+            
+            output.textContent = 
+                '✅ Cookies Found:\n\n' + 
+                cookies.split(';').map(c => '  • ' + c.trim()).join('\n') +
+                '\n\nNote: HttpOnly cookies (like sAccessToken) won\'t appear here.';
+        }
+
+        async function testAuth() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing auth endpoint...';
+            
+            try {
+                const response = await fetch('/auth/session/refresh', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                output.textContent = 
+                    '🔐 Auth Test Result:\n' +
+                    'Status: ' + response.status + ' ' + response.statusText + '\n\n' +
+                    'Response Headers:\n' +
+                    Array.from(response.headers.entries())
+                        .map(([k,v]) => '  ' + k + ': ' + (v.length > 50 ? v.substring(0,50) + '...' : v))
+                        .join('\n');
+            } catch (error) {
+                output.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing API endpoint...';
+            
+            try {
+                const response = await fetch('/api/v1/tenants', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                const text = await response.text();
+                
+                output.textContent = 
+                    '🎯 API Test Result:\n' +
+                    'Status: ' + response.status + ' ' + response.statusText + '\n' +
+                    'Body: ' + text;
+            } catch (error) {
+                output.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        function clearCookies() {
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            document.getElementById('output').textContent = '✅ Cookies cleared! Refresh the page.';
+        }
+    </script>
+</body>
+</html>

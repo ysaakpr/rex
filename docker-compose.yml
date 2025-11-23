@@ -1,0 +1,169 @@
+services:
+  # Main PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: utm-postgres
+    environment:
+      POSTGRES_USER: utmuser
+      POSTGRES_PASSWORD: utmpassword
+      POSTGRES_DB: utm_backend
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U utmuser"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - utm-network
+
+  # SuperTokens PostgreSQL Database
+  supertokens-db:
+    image: postgres:16-alpine
+    container_name: utm-supertokens-db
+    environment:
+      POSTGRES_USER: supertokens
+      POSTGRES_PASSWORD: supertokenspass
+      POSTGRES_DB: supertokens
+    volumes:
+      - supertokens_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supertokens"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - utm-network
+
+  # SuperTokens Core
+  supertokens:
+    image: registry.supertokens.io/supertokens/supertokens-postgresql:7.0
+    container_name: utm-supertokens
+    depends_on:
+      supertokens-db:
+        condition: service_healthy
+    ports:
+      - "3567:3567"
+    environment:
+      POSTGRESQL_CONNECTION_URI: postgresql://supertokens:supertokenspass@supertokens-db:5432/supertokens
+      API_KEYS: ${SUPERTOKENS_API_KEY}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3567/hello"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - utm-network
+
+  # Redis for job queue and caching
+  redis:
+    image: redis:7-alpine
+    container_name: utm-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - utm-network
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: utm-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - utm-network
+
+  # Backend API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: utm-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      supertokens:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - SUPERTOKENS_CONNECTION_URI=http://supertokens:3567
+      - REDIS_HOST=redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - go_cache:/go/pkg/mod
+    command: go run cmd/api/main.go
+    networks:
+      - utm-network
+
+  # Background Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: utm-worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - APP_ENV=development
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - go_cache:/go/pkg/mod
+    command: go run cmd/worker/main.go
+    networks:
+      - utm-network
+
+  # Frontend - React app
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: utm-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - utm-network
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  supertokens_db_data:
+  redis_data:
+  go_cache:
+
+networks:
+  utm-network:
+    driver: bridge
+

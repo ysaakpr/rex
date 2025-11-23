@@ -1,0 +1,198 @@
+package router
+
+import (
+	"github.com/gin-gonic/gin"
+	"github.com/vyshakhp/utm-backend/internal/api/handlers"
+	"github.com/vyshakhp/utm-backend/internal/api/middleware"
+	"github.com/vyshakhp/utm-backend/internal/repository"
+	"github.com/vyshakhp/utm-backend/internal/services"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+type RouterDeps struct {
+	TenantHandler        *handlers.TenantHandler
+	MemberHandler        *handlers.MemberHandler
+	InvitationHandler    *handlers.InvitationHandler
+	RBACHandler          *handlers.RBACHandler
+	PlatformAdminHandler *handlers.PlatformAdminHandler
+	UserHandler          *handlers.UserHandler
+	SystemUserHandler    *handlers.SystemUserHandler
+	MemberRepo           repository.MemberRepository
+	RBACService          services.RBACService
+	Logger               *zap.Logger
+	DB                   *gorm.DB
+}
+
+func SetupRouter(deps *RouterDeps) *gin.Engine {
+	router := gin.New()
+
+	// Global middleware
+	router.Use(gin.Recovery())
+	router.Use(middleware.CORS())
+	router.Use(middleware.Logger(deps.Logger))
+	router.Use(middleware.SuperTokensMiddleware())
+
+	// Health check
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+		})
+	})
+
+	// API v1 routes
+	v1 := router.Group("/api/v1")
+	{
+		// Public routes (optional auth for checking pending invitations)
+		v1.GET("/invitations/:token/accept", deps.InvitationHandler.AcceptInvitation)
+
+		// Protected routes (require authentication)
+		auth := v1.Group("")
+		auth.Use(middleware.AuthMiddleware())
+		{
+			// Tenant routes
+			tenants := auth.Group("/tenants")
+			{
+				tenants.POST("", deps.TenantHandler.CreateTenant)
+				tenants.POST("/managed", deps.TenantHandler.CreateManagedTenant)
+				tenants.GET("", deps.TenantHandler.ListTenants)
+
+				// Tenant-scoped routes (require tenant membership) - using :id consistently
+				tenantScoped := tenants.Group("/:id")
+				tenantScoped.Use(middleware.TenantAccessMiddleware(deps.MemberRepo))
+				{
+					// Tenant info routes
+					tenantScoped.GET("", deps.TenantHandler.GetTenant)
+					tenantScoped.PATCH("", deps.TenantHandler.UpdateTenant)
+					tenantScoped.DELETE("", deps.TenantHandler.DeleteTenant)
+					tenantScoped.GET("/status", deps.TenantHandler.GetTenantStatus)
+
+					// Member routes
+					tenantScoped.POST("/members", deps.MemberHandler.AddMember)
+					tenantScoped.GET("/members", deps.MemberHandler.ListMembers)
+					tenantScoped.GET("/members/:user_id", deps.MemberHandler.GetMember)
+					tenantScoped.PATCH("/members/:user_id", deps.MemberHandler.UpdateMember)
+					tenantScoped.DELETE("/members/:user_id", deps.MemberHandler.RemoveMember)
+					tenantScoped.POST("/members/:user_id/roles", deps.MemberHandler.AssignRoles)
+					tenantScoped.DELETE("/members/:user_id/roles/:role_id", deps.MemberHandler.RemoveRole)
+
+					// Invitation routes
+					tenantScoped.POST("/invitations", deps.InvitationHandler.CreateInvitation)
+					tenantScoped.GET("/invitations", deps.InvitationHandler.ListInvitations)
+				}
+			}
+
+			// Invitation management
+			invitations := auth.Group("/invitations")
+			{
+				invitations.POST("/:token/accept", deps.InvitationHandler.AcceptInvitation)
+				invitations.DELETE("/:id", deps.InvitationHandler.CancelInvitation)
+			}
+
+			// User routes (for fetching user details)
+			users := auth.Group("/users")
+			{
+				users.GET("", deps.UserHandler.ListUsers)
+				users.GET("/:user_id", deps.UserHandler.GetUserDetails)
+				users.GET("/:user_id/tenants", deps.UserHandler.GetUserTenants)
+				users.POST("/batch", deps.UserHandler.GetBatchUserDetails)
+			}
+
+			// Platform Admin routes (require platform admin access)
+			platform := auth.Group("/platform")
+			platform.Use(middleware.PlatformAdminMiddleware(deps.DB))
+			{
+				// Platform admin management
+				admins := platform.Group("/admins")
+				{
+					admins.POST("", deps.PlatformAdminHandler.CreateAdmin)
+					admins.GET("", deps.PlatformAdminHandler.ListAdmins)
+					admins.GET("/:user_id", deps.PlatformAdminHandler.GetAdmin)
+					admins.DELETE("/:user_id", deps.PlatformAdminHandler.DeleteAdmin)
+				}
+
+				// System users (M2M authentication)
+				systemUsers := platform.Group("/system-users")
+				{
+					systemUsers.POST("", deps.SystemUserHandler.CreateSystemUser)
+					systemUsers.GET("", deps.SystemUserHandler.ListSystemUsers)
+					systemUsers.GET("/:id", deps.SystemUserHandler.GetSystemUser)
+					systemUsers.PATCH("/:id", deps.SystemUserHandler.UpdateSystemUser)
+					systemUsers.POST("/:id/regenerate-password", deps.SystemUserHandler.RegeneratePassword)
+					systemUsers.POST("/:id/rotate", deps.SystemUserHandler.RotateWithGracePeriod)
+					systemUsers.DELETE("/:id", deps.SystemUserHandler.DeactivateSystemUser)
+				}
+
+				// Application-level credential management
+				applications := platform.Group("/applications")
+				{
+					applications.GET("/:application_name/credentials", deps.SystemUserHandler.GetApplicationCredentials)
+					applications.POST("/:application_name/revoke-old", deps.SystemUserHandler.RevokeOldCredentials)
+				}
+
+				// Relations (platform-level)
+				relations := platform.Group("/relations")
+				{
+					relations.POST("", deps.RBACHandler.CreateRelation)
+					relations.GET("", deps.RBACHandler.ListRelations)
+					relations.GET("/:id", deps.RBACHandler.GetRelation)
+					relations.PATCH("/:id", deps.RBACHandler.UpdateRelation)
+					relations.DELETE("/:id", deps.RBACHandler.DeleteRelation)
+					// Relation-to-role mapping
+					relations.POST("/:id/roles", deps.RBACHandler.AssignRolesToRelation)
+					relations.GET("/:id/roles", deps.RBACHandler.GetRelationRoles)
+					relations.DELETE("/:id/roles/:role_id", deps.RBACHandler.RevokeRoleFromRelation)
+				}
+
+				// Roles (platform-level)
+				roles := platform.Group("/roles")
+				{
+					roles.POST("", deps.RBACHandler.CreateRole)
+					roles.GET("", deps.RBACHandler.ListRoles)
+					roles.GET("/:id", deps.RBACHandler.GetRole)
+					roles.PATCH("/:id", deps.RBACHandler.UpdateRole)
+					roles.DELETE("/:id", deps.RBACHandler.DeleteRole)
+					roles.POST("/:id/permissions", deps.RBACHandler.AssignPermissionsToRole)
+					roles.DELETE("/:id/permissions/:permission_id", deps.RBACHandler.RevokePermissionFromRole)
+				}
+
+				// Permissions (platform-level)
+				permissions := platform.Group("/permissions")
+				{
+					permissions.POST("", deps.RBACHandler.CreatePermission)
+					permissions.GET("", deps.RBACHandler.ListPermissions)
+					permissions.GET("/:id", deps.RBACHandler.GetPermission)
+					permissions.DELETE("/:id", deps.RBACHandler.DeletePermission)
+				}
+			}
+
+			// Platform admin check endpoint (accessible to all authenticated users)
+			auth.GET("/platform/admins/check", deps.PlatformAdminHandler.CheckPlatformAdmin)
+
+			// Keep legacy routes for backward compatibility (deprecated)
+			relations := auth.Group("/relations")
+			{
+				relations.GET("", deps.RBACHandler.ListRelations)
+				relations.GET("/:id", deps.RBACHandler.GetRelation)
+			}
+
+			roles := auth.Group("/roles")
+			{
+				roles.GET("", deps.RBACHandler.ListRoles)
+				roles.GET("/:id", deps.RBACHandler.GetRole)
+			}
+
+			permissions := auth.Group("/permissions")
+			{
+				permissions.GET("", deps.RBACHandler.ListPermissions)
+				permissions.GET("/:id", deps.RBACHandler.GetPermission)
+				permissions.GET("/user", deps.RBACHandler.GetUserPermissions)
+			}
+
+			// Authorization check endpoint
+			auth.POST("/authorize", deps.RBACHandler.Authorize)
+		}
+	}
+
+	return router
+}

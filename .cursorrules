@@ -1,0 +1,512 @@
+# UTM Backend - Cursor AI Rules
+
+## Project Overview
+This is a Go-based multi-tenant backend with SuperTokens authentication, PostgreSQL database, Redis queue, and React frontend.
+
+## Critical Rules - ALWAYS Follow
+
+### 1. Documentation Structure (STRICTLY ENFORCED)
+
+**Root Level**: ONLY `README.md` allowed
+- The root README.md is the single entry point for all documentation
+
+**All Other Documentation**: MUST go in `docs/` folder
+```
+docs/
+├── INDEX.md                    # Master documentation index
+├── QUICKSTART.md               # Getting started guide
+├── API_EXAMPLES.md             # API reference and examples
+├── changedoc/                  # Change documentation (sequenced)
+│   ├── README.md              # Change doc overview
+│   ├── ##-NAME.md             # Sequenced change docs (01, 02, etc.)
+│   └── ...
+└── [other-docs].md            # Any additional documentation
+```
+
+**When Creating New Documentation**:
+1. **Never** create .md files in project root (except README.md)
+2. Place all docs in `docs/` or `docs/changedoc/`
+3. Update `docs/INDEX.md` with new doc references
+4. Use descriptive names: lowercase-with-dashes.md or UPPERCASE_UNDERSCORES.md
+
+**Change Documentation Rules**:
+- Significant implementation changes → Create `docs/changedoc/##-DESCRIPTION.md`
+- Use next sequence number (e.g., 06, 07, etc.)
+- Update `docs/changedoc/README.md` with new entry
+- Include: Purpose, Content summary, Date created
+
+**Frontend Documentation**:
+- Frontend-specific docs go in `frontend/` folder
+- Keep `frontend/README.md` for frontend details
+
+### 2. Go Code Standards
+
+**Version**: Go 1.23+
+
+**Project Structure**:
+```
+cmd/           # Application entry points (main.go files)
+internal/      # Private application code
+  ├── api/     # HTTP handlers, middleware, routing
+  ├── models/  # Database models (GORM)
+  ├── services/# Business logic
+  ├── repository/ # Data access layer
+  ├── jobs/    # Background jobs (Asynq)
+  ├── config/  # Configuration management
+  └── database/# Database connections and migrations
+migrations/    # SQL migration files (golang-migrate)
+scripts/       # Helper scripts
+```
+
+**Naming Conventions**:
+- Files: lowercase_with_underscores.go
+- Packages: lowercase, single word
+- Interfaces: end with "er" or descriptive name (e.g., Repository, Service)
+- Exported functions: PascalCase
+- Private functions: camelCase
+
+**Import Order**:
+1. Standard library
+2. External packages
+3. Internal packages
+(Separate groups with blank line)
+
+**Error Handling**:
+- Always wrap errors with context: `fmt.Errorf("action failed: %w", err)`
+- Never ignore errors silently
+- Log errors before returning
+- Use custom error types when needed
+
+### 3. Database & Migrations
+
+**Migration Tool**: `golang-migrate/migrate/v4`
+
+**Migration Files**:
+- Location: `migrations/`
+- Format: `YYYYMMDDHHMMSS_description.up.sql` and `.down.sql`
+- Always create both up and down migrations
+- Use CLI: `make migrate-create name=description`
+
+**Migration Management**:
+- CLI tool: `cmd/migrate/main.go`
+- Commands: `make migrate-up`, `make migrate-down`, `make migrate-status`
+- Never modify existing migrations (create new ones)
+- Test rollback before committing
+
+**GORM Models**:
+- Use `internal/models/common.go` for shared fields
+- Always include: ID (uuid), CreatedAt, UpdatedAt
+- Use proper GORM tags: `gorm:"type:varchar(255);not null"`
+- Add JSON tags for API responses
+
+### 4. API Development
+
+**Framework**: Gin
+
+**Router Structure**: `internal/api/router/router.go`
+- Group routes logically
+- Apply middleware at group level
+- Use consistent naming: `/api/v1/resource`
+
+**Handlers**: `internal/api/handlers/`
+- One file per resource (e.g., tenant_handler.go)
+- Use dependency injection
+- Return consistent response format
+
+**Response Format**:
+```go
+// Success
+{"success": true, "data": {...}}
+
+// Error
+{"success": false, "error": "message"}
+
+// List with pagination
+{"success": true, "data": {"data": [...], "total_count": N, "page": 1, "page_size": 20}}
+```
+
+**Middleware Order**:
+1. Logger
+2. CORS
+3. SuperTokens
+4. Auth (if needed)
+5. Tenant Access (if needed)
+6. RBAC (if needed)
+
+### 5. Authentication with SuperTokens
+
+**Mode**: Cookie-based (primary)
+- Cookies are secure, HTTP-only, SameSite=Lax
+- Frontend: Use SuperTokens React SDK
+- API Testing: Enable cookies in Postman/Insomnia
+
+**Configuration**:
+- Located in: `cmd/api/main.go` → `initSuperTokens()`
+- Cookie settings: secure=false for localhost, true for production
+- Always use session middleware on protected routes
+
+**Protected Routes**:
+```go
+protected := router.Group("/api/v1")
+protected.Use(middleware.AuthMiddleware())
+{
+    // Your routes here
+}
+```
+
+**Getting User ID**:
+```go
+sessionContainer := session.GetSessionFromRequestContext(c.Request.Context())
+userID := sessionContainer.GetUserID()
+```
+
+### 6. Background Jobs (Asynq)
+
+**Queue**: Redis-backed with Asynq
+
+**Task Structure**:
+- Define in: `internal/jobs/tasks/`
+- Register in: `internal/jobs/worker.go`
+- Enqueue from: Services layer
+
+**Task Patterns**:
+```go
+// Define task type as constant
+const TypeTenantInit = "tenant:init"
+
+// Payload struct
+type TenantInitPayload struct {
+    TenantID uuid.UUID `json:"tenant_id"`
+}
+
+// Handler
+func HandleTenantInit(ctx context.Context, t *asynq.Task) error {
+    // Process task
+}
+```
+
+**Best Practices**:
+- Make tasks idempotent
+- Use retries for transient failures
+- Log task progress
+- Set appropriate timeouts
+
+### 7. Frontend Development
+
+**Framework**: React 18 + Vite
+
+**Structure**:
+```
+frontend/
+├── src/
+│   ├── components/    # React components
+│   ├── App.jsx       # Main app with routing
+│   ├── main.jsx      # Entry point
+│   ├── App.css       # Styles
+│   └── index.css     # Global styles
+├── public/           # Static assets
+├── index.html        # HTML template
+├── vite.config.js   # Vite configuration
+└── package.json     # Dependencies
+```
+
+**SuperTokens Integration**:
+- Initialize in App.jsx
+- Use `<SessionAuth>` for protected routes
+- Always use `credentials: 'include'` in fetch calls
+
+**API Calls**:
+```javascript
+const response = await fetch('/api/v1/resource', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  credentials: 'include', // CRITICAL: Send cookies
+  body: JSON.stringify(data)
+});
+```
+
+### 8. Docker & Deployment
+
+**Development**: docker-compose.yml
+- 8 services: postgres, supertokens-db, supertokens, redis, api, worker, frontend, mailhog
+- Hot reload enabled for all services
+- Use named volumes for persistence
+
+**Build Process**:
+- API/Worker: Multi-stage Dockerfile (development target)
+- Frontend: Vite dev server in container
+- Production: Use production targets
+
+**Environment Variables**:
+- Required in `.env` file
+- Never commit `.env` (use `.env.example`)
+- Access via `internal/config/config.go`
+
+### 9. Testing
+
+**Unit Tests**:
+- File naming: `*_test.go`
+- Table-driven tests preferred
+- Mock external dependencies
+
+**Integration Tests**:
+- Use testcontainers for database
+- Test complete flows
+- Clean up after tests
+
+**API Testing**:
+1. **Frontend** (easiest): http://localhost:3000
+2. **Postman**: Enable "Send cookies with requests"
+3. **Scripts**: Use `scripts/` folder
+
+### 10. Git & Version Control
+
+**Branches**:
+- main: Production-ready code
+- develop: Integration branch
+- feature/*: New features
+- fix/*: Bug fixes
+- docs/*: Documentation updates
+
+**Commit Messages**:
+```
+type(scope): brief description
+
+Detailed explanation if needed
+
+Examples:
+feat(auth): add support for cookie-based sessions
+fix(tenant): resolve slug validation bug
+docs(api): update API examples for v2
+```
+
+**Never Commit**:
+- `.env` files
+- `node_modules/`
+- Binary files
+- IDE-specific files (except `.vscode/launch.json`)
+
+### 11. RBAC (Role-Based Access Control)
+
+**Structure**:
+- Relations: Tenant-level user types (Admin, Writer, Viewer, Basic)
+- Roles: Groups of permissions
+- Permissions: service:entity:action format
+
+**Middleware**:
+```go
+// Check permission
+rbacMiddleware.RequirePermission("tenant-api", "member", "create")
+
+// Check any permission
+rbacMiddleware.RequireAnyPermission([]Permission{...})
+```
+
+**Seeding**:
+- Default data: `scripts/seed_rbac.sql`
+- Run on first setup
+- Customize for your needs
+
+### 12. Code Quality
+
+**Linting**: Use golangci-lint
+```bash
+make lint
+```
+
+**Formatting**:
+- Run `gofmt` or `goimports`
+- Configure IDE to format on save
+
+**Comments**:
+- Public functions/types: godoc-style comments
+- Complex logic: Explain why, not what
+- TODO comments: Include ticket number
+
+**Code Review Checklist**:
+- [ ] Tests pass
+- [ ] No linter errors
+- [ ] Error handling correct
+- [ ] Documentation updated
+- [ ] No hardcoded values
+- [ ] Migrations tested (up and down)
+
+### 13. Environment Configuration
+
+**Config File**: `internal/config/config.go`
+
+**Loading Order**:
+1. `.env` file (development)
+2. Environment variables (production)
+3. Default values (if safe)
+
+**Required Variables**:
+- Database: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+- SuperTokens: SUPERTOKENS_CONNECTION_URI, SUPERTOKENS_API_KEY
+- Redis: REDIS_HOST, REDIS_PORT
+- App: APP_PORT, APP_ENV
+
+### 14. Makefile Usage
+
+**Common Commands**:
+```bash
+make run          # Start all services
+make stop         # Stop all services
+make logs-api     # View API logs
+make logs-worker  # View worker logs
+make migrate-up   # Apply migrations
+make migrate-down # Rollback migration
+make shell-db     # Access database
+make clean        # Clean up
+```
+
+**Adding Commands**:
+- Use `.PHONY` declaration
+- Add help text in comments
+- Keep alphabetically organized
+
+### 15. Security Best Practices
+
+**Authentication**:
+- Never store passwords (use SuperTokens)
+- Session tokens in HTTP-only cookies
+- Enable CORS properly
+- Validate all inputs
+
+**Authorization**:
+- Check tenant membership before access
+- Use RBAC middleware for permissions
+- Validate user can access resource
+
+**Data Protection**:
+- Use prepared statements (GORM does this)
+- Sanitize user input
+- Log security events
+- Rate limit API endpoints
+
+**Secrets Management**:
+- Never hardcode secrets
+- Use environment variables
+- Rotate keys regularly
+- Use strong API keys (20+ characters)
+
+## AI Assistant Guidelines
+
+When assisting with this codebase:
+
+1. **Always check documentation first** before suggesting changes
+2. **Follow the established patterns** in existing code
+3. **Update documentation** when making significant changes
+4. **Test changes** before suggesting them as complete
+5. **Consider impact** on existing features
+6. **Maintain consistency** with project style
+7. **Document WHY** not just what in complex logic
+
+## Quick Reference
+
+**Start Development**:
+```bash
+git clone <repo>
+cp .env.example .env
+make run
+open http://localhost:3000
+```
+
+**Add New API Endpoint**:
+1. Create handler in `internal/api/handlers/`
+2. Add route in `internal/api/router/router.go`
+3. Create service in `internal/services/`
+4. Add repository method if needed
+5. Update `docs/API_EXAMPLES.md`
+6. Test with Postman
+
+**Add Database Table**:
+1. Create migration: `make migrate-create name=add_table_name`
+2. Write up/down SQL
+3. Create GORM model in `internal/models/`
+4. Run migration: `make migrate-up`
+5. Test rollback: `make migrate-down`
+
+**Add Background Job**:
+1. Define task type in `internal/jobs/tasks/`
+2. Create handler function
+3. Register in `internal/jobs/worker.go`
+4. Enqueue from service layer
+5. Test with worker logs
+
+## Documentation Maintenance Rules
+
+### When to Create New Documentation
+
+**Change Documentation** (in `docs/changedoc/`):
+- Major feature implementation
+- Significant architectural changes
+- New patterns or approaches
+- Breaking changes
+- Important milestones
+
+**Regular Documentation** (in `docs/`):
+- API changes: Update `docs/API_EXAMPLES.md`
+- Setup changes: Update `docs/QUICKSTART.md`
+- Overall changes: Update root `README.md`
+- Navigation: Update `docs/INDEX.md`
+
+### Documentation Update Checklist
+
+When creating/updating docs:
+- [ ] Place in correct folder (`docs/` or `docs/changedoc/`)
+- [ ] Use appropriate naming convention
+- [ ] Update `docs/INDEX.md` if new doc
+- [ ] Update `docs/changedoc/README.md` if change doc
+- [ ] Include date and purpose
+- [ ] Add cross-references to related docs
+- [ ] Test all code examples
+- [ ] Check all links work
+
+### Documentation Quality Standards
+
+- **Clear Headings**: Use descriptive section titles
+- **Code Examples**: Always test examples before documenting
+- **Links**: Use relative links for internal docs
+- **Formatting**: Use markdown consistently
+- **Length**: Break long docs into multiple files
+- **Currency**: Update outdated information immediately
+
+## Error Messages & Logging
+
+**Log Levels**:
+- Fatal: System cannot continue
+- Error: Operation failed, needs attention
+- Warn: Something unexpected but handled
+- Info: Important business events
+- Debug: Detailed diagnostic information
+
+**Log Format** (using Zap):
+```go
+logger.Info("tenant created",
+    zap.String("tenant_id", tenantID.String()),
+    zap.String("user_id", userID),
+)
+```
+
+## Performance Considerations
+
+- Use database indexes on foreign keys
+- Paginate list endpoints (default: 20 items)
+- Cache frequently accessed data in Redis
+- Use background jobs for slow operations
+- Monitor database query performance
+
+## Troubleshooting Common Issues
+
+See `docs/changedoc/02-AUTH_TESTING.md#troubleshooting` for auth issues
+See `docs/changedoc/03-QUICK_TEST.md#troubleshooting` for testing issues
+
+---
+
+**Remember**: This is a living document. Update these rules as the project evolves, but always maintain the core principles of organization, documentation, and code quality.
+
+**Last Updated**: November 21, 2025
+**Version**: 1.0
+**Maintained By**: Development Team
+

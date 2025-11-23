@@ -1,0 +1,287 @@
+package repository
+
+import (
+	"github.com/google/uuid"
+	"github.com/vyshakhp/utm-backend/internal/models"
+	"gorm.io/gorm"
+)
+
+type RBACRepository interface {
+	// Relations
+	CreateRelation(relation *models.Relation) error
+	GetRelationByID(id uuid.UUID) (*models.Relation, error)
+	GetRelationByName(name string, tenantID *uuid.UUID) (*models.Relation, error)
+	ListRelations(tenantID *uuid.UUID) ([]*models.Relation, error)
+	UpdateRelation(relation *models.Relation) error
+	DeleteRelation(id uuid.UUID) error
+
+	// Roles
+	CreateRole(role *models.Role) error
+	GetRoleByID(id uuid.UUID) (*models.Role, error)
+	GetRoleWithPermissions(id uuid.UUID) (*models.Role, error)
+	ListRoles(tenantID *uuid.UUID) ([]*models.Role, error)
+	UpdateRole(role *models.Role) error
+	DeleteRole(id uuid.UUID) error
+
+	// Permissions
+	CreatePermission(permission *models.Permission) error
+	GetPermissionByID(id uuid.UUID) (*models.Permission, error)
+	GetPermissionByKey(service, entity, action string) (*models.Permission, error)
+	ListPermissions() ([]*models.Permission, error)
+	ListPermissionsByService(service string) ([]*models.Permission, error)
+	DeletePermission(id uuid.UUID) error
+
+	// Role-Permission assignments
+	AssignPermissionsToRole(roleID uuid.UUID, permissionIDs []uuid.UUID) error
+	RevokePermissionFromRole(roleID uuid.UUID, permissionID uuid.UUID) error
+	GetRolePermissions(roleID uuid.UUID) ([]*models.Permission, error)
+
+	// Authorization queries
+	GetUserPermissions(tenantID uuid.UUID, userID string) ([]*models.Permission, error)
+	CheckUserPermission(tenantID uuid.UUID, userID string, service, entity, action string) (bool, error)
+
+	// Relation-Role assignments
+	AssignRolesToRelation(relationID uuid.UUID, roleIDs []uuid.UUID) error
+	RevokeRoleFromRelation(relationID uuid.UUID, roleID uuid.UUID) error
+	GetRelationRoles(relationID uuid.UUID) ([]*models.Role, error)
+}
+
+type rbacRepository struct {
+	db *gorm.DB
+}
+
+func NewRBACRepository(db *gorm.DB) RBACRepository {
+	return &rbacRepository{db: db}
+}
+
+// Relations
+func (r *rbacRepository) CreateRelation(relation *models.Relation) error {
+	return r.db.Create(relation).Error
+}
+
+func (r *rbacRepository) GetRelationByID(id uuid.UUID) (*models.Relation, error) {
+	var relation models.Relation
+	err := r.db.Where("id = ?", id).First(&relation).Error
+	return &relation, err
+}
+
+func (r *rbacRepository) GetRelationByName(name string, tenantID *uuid.UUID) (*models.Relation, error) {
+	var relation models.Relation
+	query := r.db.Where("name = ?", name)
+	if tenantID != nil {
+		query = query.Where("(tenant_id = ? OR tenant_id IS NULL)", *tenantID)
+	} else {
+		query = query.Where("tenant_id IS NULL")
+	}
+	err := query.First(&relation).Error
+	return &relation, err
+}
+
+func (r *rbacRepository) ListRelations(tenantID *uuid.UUID) ([]*models.Relation, error) {
+	var relations []*models.Relation
+	query := r.db.Model(&models.Relation{})
+	if tenantID != nil {
+		query = query.Where("tenant_id = ? OR tenant_id IS NULL", *tenantID)
+	} else {
+		query = query.Where("is_system = ?", true)
+	}
+	err := query.Order("name ASC").Find(&relations).Error
+	return relations, err
+}
+
+func (r *rbacRepository) UpdateRelation(relation *models.Relation) error {
+	return r.db.Save(relation).Error
+}
+
+func (r *rbacRepository) DeleteRelation(id uuid.UUID) error {
+	return r.db.Delete(&models.Relation{}, id).Error
+}
+
+// Roles
+func (r *rbacRepository) CreateRole(role *models.Role) error {
+	return r.db.Create(role).Error
+}
+
+func (r *rbacRepository) GetRoleByID(id uuid.UUID) (*models.Role, error) {
+	var role models.Role
+	err := r.db.Where("id = ?", id).First(&role).Error
+	return &role, err
+}
+
+func (r *rbacRepository) GetRoleWithPermissions(id uuid.UUID) (*models.Role, error) {
+	var role models.Role
+	err := r.db.Preload("Permissions").Where("id = ?", id).First(&role).Error
+	return &role, err
+}
+
+func (r *rbacRepository) ListRoles(tenantID *uuid.UUID) ([]*models.Role, error) {
+	var roles []*models.Role
+	query := r.db.Model(&models.Role{}).Preload("Permissions")
+	if tenantID != nil {
+		query = query.Where("tenant_id = ? OR tenant_id IS NULL", *tenantID)
+	} else {
+		query = query.Where("is_system = ?", true)
+	}
+	err := query.Order("name ASC").Find(&roles).Error
+	return roles, err
+}
+
+func (r *rbacRepository) UpdateRole(role *models.Role) error {
+	return r.db.Save(role).Error
+}
+
+func (r *rbacRepository) DeleteRole(id uuid.UUID) error {
+	return r.db.Delete(&models.Role{}, id).Error
+}
+
+// Permissions
+func (r *rbacRepository) CreatePermission(permission *models.Permission) error {
+	return r.db.Create(permission).Error
+}
+
+func (r *rbacRepository) GetPermissionByID(id uuid.UUID) (*models.Permission, error) {
+	var permission models.Permission
+	err := r.db.Where("id = ?", id).First(&permission).Error
+	return &permission, err
+}
+
+func (r *rbacRepository) GetPermissionByKey(service, entity, action string) (*models.Permission, error) {
+	var permission models.Permission
+	err := r.db.Where("service = ? AND entity = ? AND action = ?", service, entity, action).
+		First(&permission).Error
+	return &permission, err
+}
+
+func (r *rbacRepository) ListPermissions() ([]*models.Permission, error) {
+	var permissions []*models.Permission
+	err := r.db.Order("service ASC, entity ASC, action ASC").Find(&permissions).Error
+	return permissions, err
+}
+
+func (r *rbacRepository) ListPermissionsByService(service string) ([]*models.Permission, error) {
+	var permissions []*models.Permission
+	err := r.db.Where("service = ?", service).
+		Order("entity ASC, action ASC").
+		Find(&permissions).Error
+	return permissions, err
+}
+
+func (r *rbacRepository) DeletePermission(id uuid.UUID) error {
+	return r.db.Delete(&models.Permission{}, id).Error
+}
+
+// Role-Permission assignments
+func (r *rbacRepository) AssignPermissionsToRole(roleID uuid.UUID, permissionIDs []uuid.UUID) error {
+	role := &models.Role{ID: roleID}
+	return r.db.Model(role).Association("Permissions").Append(convertToPermissions(permissionIDs))
+}
+
+func (r *rbacRepository) RevokePermissionFromRole(roleID uuid.UUID, permissionID uuid.UUID) error {
+	role := &models.Role{ID: roleID}
+	permission := &models.Permission{ID: permissionID}
+	return r.db.Model(role).Association("Permissions").Delete(permission)
+}
+
+func (r *rbacRepository) GetRolePermissions(roleID uuid.UUID) ([]*models.Permission, error) {
+	var permissions []*models.Permission
+	err := r.db.
+		Joins("JOIN role_permissions ON role_permissions.permission_id = permissions.id").
+		Where("role_permissions.role_id = ?", roleID).
+		Find(&permissions).Error
+	return permissions, err
+}
+
+// Authorization queries
+func (r *rbacRepository) GetUserPermissions(tenantID uuid.UUID, userID string) ([]*models.Permission, error) {
+	var permissions []*models.Permission
+	err := r.db.Raw(`
+		SELECT DISTINCT p.*
+		FROM permissions p
+		INNER JOIN role_permissions rp ON rp.permission_id = p.id
+		INNER JOIN member_roles mr ON mr.role_id = rp.role_id
+		INNER JOIN tenant_members tm ON tm.id = mr.member_id
+		WHERE tm.tenant_id = ? AND tm.user_id = ? AND tm.status = 'active'
+	`, tenantID, userID).Scan(&permissions).Error
+	return permissions, err
+}
+
+func (r *rbacRepository) CheckUserPermission(tenantID uuid.UUID, userID string, service, entity, action string) (bool, error) {
+	var count int64
+	err := r.db.Raw(`
+		SELECT COUNT(DISTINCT p.id)
+		FROM permissions p
+		INNER JOIN role_permissions rp ON rp.permission_id = p.id
+		INNER JOIN member_roles mr ON mr.role_id = rp.role_id
+		INNER JOIN tenant_members tm ON tm.id = mr.member_id
+		WHERE tm.tenant_id = ? 
+		  AND tm.user_id = ? 
+		  AND tm.status = 'active'
+		  AND p.service = ?
+		  AND p.entity = ?
+		  AND p.action = ?
+	`, tenantID, userID, service, entity, action).Scan(&count).Error
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func convertToPermissions(permissionIDs []uuid.UUID) []*models.Permission {
+	permissions := make([]*models.Permission, len(permissionIDs))
+	for i, id := range permissionIDs {
+		permissions[i] = &models.Permission{ID: id}
+	}
+	return permissions
+}
+
+// AssignRolesToRelation assigns multiple roles to a relation
+func (r *rbacRepository) AssignRolesToRelation(relationID uuid.UUID, roleIDs []uuid.UUID) error {
+	// Add new role assignments (don't delete existing ones)
+	for _, roleID := range roleIDs {
+		// Check if the assignment already exists
+		var existing models.RelationRole
+		err := r.db.Where("relation_id = ? AND role_id = ?", relationID, roleID).
+			First(&existing).Error
+
+		if err == nil {
+			// Assignment already exists, skip
+			continue
+		}
+
+		// Create new assignment
+		relationRole := &models.RelationRole{
+			RelationID: relationID,
+			RoleID:     roleID,
+		}
+		if err := r.db.Create(relationRole).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// RevokeRoleFromRelation removes a role from a relation
+func (r *rbacRepository) RevokeRoleFromRelation(relationID uuid.UUID, roleID uuid.UUID) error {
+	return r.db.Where("relation_id = ? AND role_id = ?", relationID, roleID).
+		Delete(&models.RelationRole{}).Error
+}
+
+// GetRelationRoles retrieves all roles associated with a relation
+func (r *rbacRepository) GetRelationRoles(relationID uuid.UUID) ([]*models.Role, error) {
+	var roles []*models.Role
+	err := r.db.Table("roles").
+		Select("roles.*").
+		Joins("JOIN relation_roles ON roles.id = relation_roles.role_id").
+		Where("relation_roles.relation_id = ?", relationID).
+		Preload("Permissions").
+		Find(&roles).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return roles, nil
+}

@@ -1,0 +1,9 @@
+config:
+  aws:region: us-east-1
+  utm-backend:environment: dev
+  utm-backend:projectName: utm-backend
+  utm-backend:vpcCidr: 10.0.0.0/16
+  utm-backend:dbMasterUsername: utmadmin
+  # Set these via: pulumi config set --secret utm-backend:dbMasterPassword <password>
+  # pulumi config set --secret utm-backend:supertokensApiKey <api-key>
+
