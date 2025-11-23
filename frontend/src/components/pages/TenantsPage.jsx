@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Building2, Users, Calendar, MoreVertical, Edit, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, Building2, Users, Calendar, MoreVertical, Edit, Trash2, AlertTriangle, Loader2, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Input } from '../ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ export function TenantsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadTenants();
@@ -85,6 +87,18 @@ export function TenantsPage() {
     }
   };
 
+  // Filter tenants based on search query (name or ID)
+  const filteredTenants = tenants.filter(tenant => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const name = (tenant.name || '').toLowerCase();
+    const slug = (tenant.slug || '').toLowerCase();
+    const id = (tenant.id || '').toLowerCase();
+    
+    return name.includes(query) || slug.includes(query) || id.includes(query);
+  });
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -101,15 +115,34 @@ export function TenantsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tenants</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Tenants
+            {tenants.length > 0 && (
+              <span className="text-muted-foreground text-xl ml-2">
+                ({searchQuery ? `${filteredTenants.length} of ${tenants.length}` : tenants.length})
+              </span>
+            )}
+          </h1>
           <p className="text-muted-foreground mt-2">
             Manage and monitor all tenants in your platform
           </p>
         </div>
-        <Button onClick={handleCreateTenant} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Create Tenant
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search by name, slug, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleCreateTenant} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Tenant
+          </Button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -122,25 +155,37 @@ export function TenantsPage() {
       )}
 
       {/* Tenants Grid */}
-      {tenants.length === 0 ? (
+      {filteredTenants.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-4">
-              <Building2 className="h-10 w-10 text-muted-foreground" />
+              {searchQuery ? (
+                <Search className="h-10 w-10 text-muted-foreground" />
+              ) : (
+                <Building2 className="h-10 w-10 text-muted-foreground" />
+              )}
             </div>
-            <h3 className="text-lg font-semibold mb-2">No tenants yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No tenants found' : 'No tenants yet'}
+            </h3>
             <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
-              Get started by creating your first tenant. Tenants represent organizations or workspaces in your platform.
+              {searchQuery ? (
+                <>No tenants match your search "{searchQuery}". Try a different search term.</>
+              ) : (
+                <>Get started by creating your first tenant. Tenants represent organizations or workspaces in your platform.</>
+              )}
             </p>
-            <Button onClick={handleCreateTenant} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Create Your First Tenant
-            </Button>
+            {!searchQuery && (
+              <Button onClick={handleCreateTenant} className="gap-2">
+                <Plus className="h-4 w-4" />
+                Create Your First Tenant
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tenants.map((tenant) => (
+          {filteredTenants.map((tenant) => (
             <Card 
               key={tenant.id} 
               className="hover:shadow-lg transition-all cursor-pointer hover:border-primary/50"
