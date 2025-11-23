@@ -264,8 +264,8 @@ export function PolicyDetailsPage() {
           <TabsTrigger value="permissions">
             Permissions ({policy.permissions?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="relations">
-            Relations ({policy.relations_count || 0})
+          <TabsTrigger value="roles">
+            Roles ({policy.roles?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -327,22 +327,47 @@ export function PolicyDetailsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="relations">
+        <TabsContent value="roles">
           <Card>
             <CardHeader>
-              <CardTitle>Mapped Relations</CardTitle>
+              <CardTitle>Attached Roles</CardTitle>
               <CardDescription>
-                Relations that automatically grant this policy
+                Roles that include this policy
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
-                <Lock className="mx-auto h-12 w-12 mb-4 opacity-50" />
-                <p className="text-sm">Relation mapping managed from Relations page</p>
-                <p className="text-xs mt-1">
-                  {policy.relations_count || 0} {policy.relations_count === 1 ? 'relation' : 'relations'} mapped
-                </p>
-              </div>
+              {!policy.roles || policy.roles.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Shield className="mx-auto h-12 w-12 mb-4 opacity-50" />
+                  <p className="text-sm">No roles attached yet</p>
+                  <p className="text-xs mt-1">Roles are managed from the Roles page</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {policy.roles.map((role) => (
+                    <div
+                      key={role.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent cursor-pointer"
+                      onClick={() => navigate(`/roles/${role.id}`)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-muted-foreground" />
+                          <p className="font-medium">{role.name}</p>
+                          {role.is_system && (
+                            <Badge variant="secondary" className="text-xs">
+                              System
+                            </Badge>
+                          )}
+                        </div>
+                        {role.description && (
+                          <p className="text-xs text-muted-foreground mt-1">{role.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -402,7 +427,7 @@ export function PolicyDetailsPage() {
               Are you sure you want to delete <strong>{policy.name}</strong>?
               <br />
               <span className="text-red-600 dark:text-red-400 font-semibold mt-2 block">
-                This will remove it from all relations.
+                This will remove it from all roles.
               </span>
             </DialogDescription>
           </DialogHeader>

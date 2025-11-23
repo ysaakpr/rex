@@ -18,6 +18,7 @@ type Policy struct {
 
 	// Associations
 	Permissions []Permission `gorm:"many2many:policy_permissions;" json:"permissions,omitempty"`
+	Roles       []Role       `gorm:"many2many:role_policies;foreignKey:ID;joinForeignKey:PolicyID;References:ID;joinReferences:RoleID;" json:"roles,omitempty"`
 }
 
 func (Policy) TableName() string {
@@ -46,6 +47,8 @@ type PolicyResponse struct {
 	TenantID    *uuid.UUID           `json:"tenant_id"`
 	IsSystem    bool                 `json:"is_system"`
 	Permissions []PermissionResponse `json:"permissions,omitempty"`
+	Roles       []RoleResponse       `json:"roles,omitempty"`
+	RolesCount  int                  `json:"roles_count"`
 	CreatedAt   time.Time            `json:"created_at"`
 	UpdatedAt   time.Time            `json:"updated_at"`
 }
@@ -57,6 +60,7 @@ func (p *Policy) ToResponse() *PolicyResponse {
 		Description: p.Description,
 		TenantID:    p.TenantID,
 		IsSystem:    p.IsSystem,
+		RolesCount:  len(p.Roles),
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}
@@ -65,6 +69,13 @@ func (p *Policy) ToResponse() *PolicyResponse {
 		resp.Permissions = make([]PermissionResponse, len(p.Permissions))
 		for i, perm := range p.Permissions {
 			resp.Permissions[i] = *perm.ToResponse()
+		}
+	}
+
+	if len(p.Roles) > 0 {
+		resp.Roles = make([]RoleResponse, len(p.Roles))
+		for i, role := range p.Roles {
+			resp.Roles[i] = *role.ToResponse()
 		}
 	}
 

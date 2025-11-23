@@ -25,7 +25,7 @@ import './index.css';
 // SuperTokens configuration
 SuperTokens.init({
   appInfo: {
-    appName: "UTM Backend",
+    appName: "Rex",
     apiDomain: window.location.origin,
     websiteDomain: window.location.origin,
     apiBasePath: "/api/auth",  // API calls go to /api/auth (proxied to backend)

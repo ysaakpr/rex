@@ -19,7 +19,7 @@ type Role struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 
 	// Associations
-	Policies []Policy `gorm:"many2many:role_policies;" json:"policies,omitempty"`
+	Policies []Policy `gorm:"many2many:role_policies;foreignKey:ID;joinForeignKey:RoleID;References:ID;joinReferences:PolicyID;" json:"policies,omitempty"`
 }
 
 func (Role) TableName() string {

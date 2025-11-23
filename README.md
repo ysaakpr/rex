@@ -1,4 +1,8 @@
-# Rex
+# 🦖 Rex
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go)](https://go.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](https://www.docker.com/)
 
 > Happily developed with Cursor and Claude-4.5 🎉
 
@@ -402,7 +406,15 @@ migrate -path=./migrations \
 
 ## 📝 License
 
-[Your License Here]
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**MIT License Summary**:
+- ✅ Commercial use allowed
+- ✅ Modification allowed
+- ✅ Distribution allowed
+- ✅ Private use allowed
+- ⚠️ License and copyright notice must be included
+- ⚠️ No liability or warranty provided
 
 ## 📧 Support
 

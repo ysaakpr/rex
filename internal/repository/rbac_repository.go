@@ -118,13 +118,13 @@ func (r *rbacRepository) GetPolicyByID(id uuid.UUID) (*models.Policy, error) {
 
 func (r *rbacRepository) GetPolicyWithPermissions(id uuid.UUID) (*models.Policy, error) {
 	var policy models.Policy
-	err := r.db.Preload("Permissions").Where("id = ?", id).First(&policy).Error
+	err := r.db.Preload("Permissions").Preload("Roles").Where("id = ?", id).First(&policy).Error
 	return &policy, err
 }
 
 func (r *rbacRepository) ListPolicies(tenantID *uuid.UUID) ([]*models.Policy, error) {
 	var policies []*models.Policy
-	query := r.db.Model(&models.Policy{}).Preload("Permissions")
+	query := r.db.Model(&models.Policy{}).Preload("Permissions").Preload("Roles")
 	if tenantID != nil {
 		query = query.Where("tenant_id = ? OR tenant_id IS NULL", *tenantID)
 	} else {

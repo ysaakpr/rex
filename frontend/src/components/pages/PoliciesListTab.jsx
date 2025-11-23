@@ -208,7 +208,7 @@ export function PoliciesListTab() {
                 <div className="flex items-center text-sm text-muted-foreground gap-2">
                   <Lock className="h-4 w-4" />
                   <span>
-                    {policy.relations_count || 0} {policy.relations_count === 1 ? 'relation' : 'relations'}
+                    {policy.roles_count || 0} {policy.roles_count === 1 ? 'role' : 'roles'}
                   </span>
                 </div>
               </CardContent>

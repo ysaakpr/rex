@@ -45,7 +45,10 @@ export function Sidebar({ onSignOut }) {
     <div className="flex h-full w-64 flex-col border-r bg-card">
       {/* Logo/Brand */}
       <div className="p-6">
-        <h1 className="text-2xl font-bold text-primary">UTM Platform</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-3xl">🦖</span>
+          <h1 className="text-2xl font-bold text-primary">Rex</h1>
+        </div>
         <p className="text-sm text-muted-foreground mt-1">Admin Dashboard</p>
       </div>
 
