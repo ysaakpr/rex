@@ -25,7 +25,6 @@ echo -e "${YELLOW}Getting service names from Pulumi...${NC}"
 CLUSTER_NAME=$(pulumi stack output ecsClusterName)
 API_SERVICE=$(pulumi stack output apiServiceName)
 WORKER_SERVICE=$(pulumi stack output workerServiceName)
-FRONTEND_SERVICE=$(pulumi stack output frontendServiceName)
 SUPERTOKENS_SERVICE=$(pulumi stack output supertokensServiceName)
 
 if [ -z "$CLUSTER_NAME" ]; then
@@ -34,6 +33,8 @@ if [ -z "$CLUSTER_NAME" ]; then
 fi
 
 echo -e "${GREEN}✓ Service names retrieved${NC}"
+echo ""
+echo -e "${YELLOW}Note: Frontend is deployed via AWS Amplify (push to GitHub to deploy)${NC}"
 echo ""
 
 # Force new deployment for API
@@ -56,17 +57,6 @@ if [ -n "$WORKER_SERVICE" ]; then
         --force-new-deployment \
         --output text > /dev/null
     echo -e "${GREEN}✓ Worker service deployment triggered${NC}"
-fi
-
-# Force new deployment for Frontend
-if [ -n "$FRONTEND_SERVICE" ]; then
-    echo -e "${YELLOW}Forcing new deployment for Frontend service...${NC}"
-    aws ecs update-service \
-        --cluster "$CLUSTER_NAME" \
-        --service "$FRONTEND_SERVICE" \
-        --force-new-deployment \
-        --output text > /dev/null
-    echo -e "${GREEN}✓ Frontend service deployment triggered${NC}"
 fi
 
 # Optional: SuperTokens (usually doesn't need redeployment)

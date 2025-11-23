@@ -2,13 +2,15 @@ config:
   aws:region: ap-south-1
   rex-backend:environment: dev
   rex-backend:projectName: rex-backend
-  rex-backend:vpcCidr: 172.31.0.0/16
+  rex-backend:vpcCidr: 10.0.0.0/16
   rex-backend:dbMasterUsername: rexadmin
   # GitHub configuration for AWS Amplify frontend deployment
   rex-backend:githubRepo: https://github.com/ysaakpr/rex
   rex-backend:githubBranch: main
-  # Optional: GitHub token for better rate limits (not required for public repos)
-  # rex-backend:githubToken: <github-personal-access-token>
+  # Optional: GitHub token (ONLY needed for private repos or better rate limits)
+  # For public repos: Leave this commented out (DO NOT set empty string)
+  # For private repos: Uncomment and set your token
+  # rex-backend:githubToken: ghp_your_github_personal_access_token
 
   # Secrets (encrypted)
   rex-backend:dbMasterPassword:

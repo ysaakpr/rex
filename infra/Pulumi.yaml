@@ -13,7 +13,7 @@ config:
   
   rex-backend:vpcCidr:
     description: VPC CIDR block
-    default: 172.31.0.0/16
+    default: 10.0.0.0/16
 
   
   rex-backend:dbMasterUsername:
@@ -45,6 +45,6 @@ config:
     default: main
   
   rex-backend:githubToken:
-    description: GitHub personal access token (optional for public repos)
+    description: GitHub personal access token (required for private repos, optional for public repos)
     default: ""
 

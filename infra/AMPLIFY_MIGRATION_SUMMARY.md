@@ -78,8 +78,10 @@ pulumi config set rex-backend:githubRepo "https://github.com/yourusername/rex-ba
 # Required: Branch to deploy
 pulumi config set rex-backend:githubBranch "main"
 
-# Optional: GitHub token for better rate limits (not required for public repos)
-pulumi config set rex-backend:githubToken "ghp_your_token_here"
+# Optional: GitHub token (ONLY needed for private repos or better rate limits)
+# For public repos: Skip this step entirely (DO NOT set empty string)
+# For private repos: Uncomment and set your token
+# pulumi config set rex-backend:githubToken "ghp_your_github_token_here"
 ```
 
 ## Architecture Comparison
@@ -133,64 +135,70 @@ ALB → API (ECS Fargate) + Worker (ECS Fargate) + SuperTokens (ECS Fargate)
 cd /Users/vyshakhp/work/utm-backend/infra
 
 # Set your GitHub repository
-pulumi config set rex-backend:githubRepo "https://github.com/yourusername/rex-backend"
+pulumi config set rex-backend:githubRepo "https://github.com/ysaakpr/rex"
 
 # Set branch (default: main)
 pulumi config set rex-backend:githubBranch "main"
 ```
 
-### 2. Verify Configuration
+### 2. Initial Infrastructure Deployment
+
+Deploy infrastructure first (ECR repos will be created):
 
 ```bash
-pulumi config
+pulumi preview  # Review changes
+pulumi up       # Deploy
 ```
 
-Should show:
-```
-KEY                              VALUE
-aws:region                       us-east-1
-rex-backend:dbMasterPassword     [secret]
-rex-backend:environment          dev
-rex-backend:githubBranch         main
-rex-backend:githubRepo           https://github.com/yourusername/rex-backend
-rex-backend:projectName          rex-backend
-rex-backend:supertokensApiKey    [secret]
-rex-backend:vpcCidr              10.0.0.0/16
-```
+**Note**: ECS services will fail initially because Docker images don't exist yet. This is expected!
 
-### 3. Preview Changes
+Deployment takes ~15-20 minutes.
+
+### 3. Build and Push Docker Images
+
+Now that ECR repositories exist:
 
 ```bash
-pulumi preview
+# Use the helper script
+./infra/scripts/build-and-push.sh
+
+# Or manually:
+# Get ECR URLs from Pulumi outputs
+# Build images
+# Push to ECR
 ```
 
-This will show:
-- ✅ Resources to create (Amplify app, branch)
-- ❌ Resources to delete (frontend ECS service, frontend target group, etc.)
-- 🔄 Resources to modify (ALB listener default action)
+### 4. Update ECS Services
 
-### 4. Deploy
+Force services to redeploy with the new images:
 
 ```bash
-pulumi up
+# Use the helper script
+./infra/scripts/force-deploy.sh
+
+# Or manually:
+cd infra
+aws ecs update-service --cluster $(pulumi stack output ecsClusterName) \
+  --service $(pulumi stack output apiServiceName) --force-new-deployment
+aws ecs update-service --cluster $(pulumi stack output ecsClusterName) \
+  --service $(pulumi stack output workerServiceName) --force-new-deployment
 ```
 
-Review and confirm the changes. Deployment takes ~10-15 minutes.
-
-### 5. Get Frontend URL
+### 5. Run Database Migrations
 
 ```bash
+./infra/scripts/run-migration.sh
+```
+
+### 6. Get URLs and Test
+
+```bash
+# Get frontend URL
 pulumi stack output frontendUrl
-```
 
-Output will be something like:
-```
-https://main.d1234abcdefg.amplifyapp.com
-```
+# Get API URL
+pulumi stack output albDnsName
 
-### 6. Test
-
-```bash
 # Open frontend
 open $(pulumi stack output frontendUrl)
 

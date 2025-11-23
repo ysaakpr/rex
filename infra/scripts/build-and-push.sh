@@ -26,9 +26,8 @@ cd "$(dirname "$0")/.."
 echo -e "${YELLOW}Getting ECR repository URLs from Pulumi...${NC}"
 API_REPO=$(pulumi stack output apiRepositoryUrl)
 WORKER_REPO=$(pulumi stack output workerRepositoryUrl)
-FRONTEND_REPO=$(pulumi stack output frontendRepositoryUrl)
 
-if [ -z "$API_REPO" ] || [ -z "$WORKER_REPO" ] || [ -z "$FRONTEND_REPO" ]; then
+if [ -z "$API_REPO" ] || [ -z "$WORKER_REPO" ]; then
     echo -e "${RED}Error: Could not get repository URLs. Make sure infrastructure is deployed.${NC}"
     exit 1
 fi
@@ -36,7 +35,8 @@ fi
 echo -e "${GREEN}✓ Repository URLs retrieved${NC}"
 echo "  API: $API_REPO"
 echo "  Worker: $WORKER_REPO"
-echo "  Frontend: $FRONTEND_REPO"
+echo ""
+echo -e "${YELLOW}Note: Frontend is deployed via AWS Amplify (not ECR)${NC}"
 echo ""
 
 # Get AWS account and region
@@ -62,11 +62,6 @@ echo -e "${GREEN}✓ API image built${NC}"
 echo -e "${YELLOW}Building Worker image...${NC}"
 docker build -f Dockerfile.prod --target worker -t rex-backend-worker:latest .
 echo -e "${GREEN}✓ Worker image built${NC}"
-
-# Build Frontend image
-echo -e "${YELLOW}Building Frontend image...${NC}"
-docker build -f frontend/Dockerfile.prod -t rex-backend-frontend:latest frontend/
-echo -e "${GREEN}✓ Frontend image built${NC}"
 echo ""
 
 # Tag and push API
@@ -80,20 +75,18 @@ echo -e "${YELLOW}Pushing Worker image to ECR...${NC}"
 docker tag rex-backend-worker:latest "${WORKER_REPO}:latest"
 docker push "${WORKER_REPO}:latest"
 echo -e "${GREEN}✓ Worker image pushed${NC}"
-
-# Tag and push Frontend
-echo -e "${YELLOW}Pushing Frontend image to ECR...${NC}"
-docker tag rex-backend-frontend:latest "${FRONTEND_REPO}:latest"
-docker push "${FRONTEND_REPO}:latest"
-echo -e "${GREEN}✓ Frontend image pushed${NC}"
 echo ""
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}All images built and pushed successfully!${NC}"
+echo -e "${GREEN}Backend images built and pushed successfully!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "Next steps:"
 echo "1. Force new deployment: ./infra/scripts/force-deploy.sh"
 echo "2. Run database migrations: ./infra/scripts/run-migration.sh"
+echo ""
+echo -e "${YELLOW}Frontend Deployment:${NC}"
+echo "Frontend is automatically deployed via AWS Amplify when you push to GitHub."
+echo "No manual build/push required for frontend!"
 echo ""
 

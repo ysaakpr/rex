@@ -180,7 +180,9 @@ pulumi config set --secret rex-backend:supertokensApiKey "your-supertokens-api-k
 pulumi config set rex-backend:githubRepo "https://github.com/yourusername/rex-backend"
 pulumi config set rex-backend:githubBranch "main"
 
-# Optional: GitHub token for better rate limits (not required for public repos)
+# Optional: GitHub token (ONLY needed for private repos or better rate limits)
+# For public repos, you can skip this - leave it unset
+# For private repos, you MUST set this:
 # pulumi config set rex-backend:githubToken "ghp_your_github_token_here"
 
 # Optional: Set custom domain and certificate for backend API
@@ -207,56 +209,108 @@ pulumi config
 
 ## Deployment Process
 
-### Step 1: Build and Push Docker Images
+### Step 1: Initial Infrastructure Deployment
 
-Before deploying infrastructure, build and push backend Docker images to ECR.
+First, deploy the infrastructure to create ECR repositories and other resources.
 
-**Note**: Frontend is now deployed via AWS Amplify directly from GitHub, so no frontend Docker image is needed!
-
-```bash
-# From project root
-cd /path/to/rex-backend
-
-# Build production images for backend services only
-docker build -f Dockerfile.prod --target api -t rex-backend-api:latest .
-docker build -f Dockerfile.prod --target worker -t rex-backend-worker:latest .
-
-# After Pulumi creates ECR repositories, tag and push:
-# (ECR URLs will be in Pulumi outputs)
-
-# Login to ECR
-aws ecr get-login-password --region us-east-1 | \
-  docker login --username AWS --password-stdin <account-id>.dkr.ecr.us-east-1.amazonaws.com
-
-# Tag images
-docker tag rex-backend-api:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-api:latest
-docker tag rex-backend-worker:latest <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-worker:latest
-
-# Push images
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-api:latest
-docker push <account-id>.dkr.ecr.us-east-1.amazonaws.com/rex-backend-dev-worker:latest
-```
-
-### Step 2: Preview Infrastructure Changes
+**Note**: ECS services will initially fail to start because Docker images don't exist yet. This is expected!
 
 ```bash
 cd infra
+
+# Preview what will be created
 pulumi preview
-```
 
-This shows what resources will be created.
-
-### Step 3: Deploy Infrastructure
-
-```bash
+# Deploy infrastructure (creates VPC, RDS, Redis, ECR, ALB, etc.)
 pulumi up
 ```
 
-Review the changes and confirm. Deployment takes ~15-20 minutes.
+Review the changes and confirm. Initial deployment takes ~15-20 minutes.
+
+**Expected**: ECS tasks (API, Worker, SuperTokens) will fail to start because images don't exist in ECR yet. This is normal for first deployment!
+
+### Step 2: Build and Push Docker Images
+
+Now that ECR repositories exist, build and push your Docker images.
+
+**Note**: Frontend is deployed via AWS Amplify from GitHub, so no frontend Docker image is needed!
+
+**Option A: Using the helper script (recommended)**
+
+```bash
+# Run the automated build and push script
+./infra/scripts/build-and-push.sh
+```
+
+**Option B: Manual build and push**
+
+```bash
+# Get ECR repository URLs from Pulumi
+cd infra
+API_REPO=$(pulumi stack output apiRepositoryUrl)
+WORKER_REPO=$(pulumi stack output workerRepositoryUrl)
+AWS_REGION=$(pulumi config get aws:region)
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+echo "API Repository: $API_REPO"
+echo "Worker Repository: $WORKER_REPO"
+
+# Go back to project root
+cd ..
+
+# Build production images for backend services
+docker build -f Dockerfile.prod --target api -t rex-backend-api:latest .
+docker build -f Dockerfile.prod --target worker -t rex-backend-worker:latest .
+
+# Login to ECR
+aws ecr get-login-password --region $AWS_REGION | \
+  docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+# Tag images with ECR repository URLs
+docker tag rex-backend-api:latest $API_REPO:latest
+docker tag rex-backend-worker:latest $WORKER_REPO:latest
+
+# Push images to ECR
+docker push $API_REPO:latest
+docker push $WORKER_REPO:latest
+
+echo "✅ Images pushed successfully!"
+```
+
+### Step 3: Update ECS Services
+
+Force ECS services to redeploy with the newly pushed images.
+
+**Option A: Using the helper script (recommended)**
+
+```bash
+# Run the automated deployment script
+./infra/scripts/force-deploy.sh
+```
+
+**Option B: Manual deployment**
+
+```bash
+cd infra
+
+# Get cluster and service names
+CLUSTER_NAME=$(pulumi stack output ecsClusterName)
+API_SERVICE=$(pulumi stack output apiServiceName)
+WORKER_SERVICE=$(pulumi stack output workerServiceName)
+SUPERTOKENS_SERVICE=$(pulumi stack output supertokensServiceName)
+
+# Force new deployment for all services
+aws ecs update-service --cluster $CLUSTER_NAME --service $API_SERVICE --force-new-deployment
+aws ecs update-service --cluster $CLUSTER_NAME --service $WORKER_SERVICE --force-new-deployment
+aws ecs update-service --cluster $CLUSTER_NAME --service $SUPERTOKENS_SERVICE --force-new-deployment
+
+echo "✅ ECS services are redeploying with new images..."
+echo "This will take 2-3 minutes. Monitor status in AWS Console."
+```
 
 ### Step 4: Run Database Migrations
 
-After infrastructure is deployed, run migrations:
+After ECS services are running, run database migrations:
 
 ```bash
 # Get outputs
@@ -316,6 +370,42 @@ open $FRONTEND_URL  # macOS
 - Amplify will automatically build and deploy your frontend when you push to GitHub
 - Check build status in AWS Console → Amplify → Your App
 - Frontend URL will be in the format: `https://main.xxxxx.amplifyapp.com`
+
+## Quick Deployment Reference
+
+After initial setup, use these commands for quick deployments:
+
+### Deploy Backend Code Changes
+
+```bash
+# 1. Build and push new images
+./infra/scripts/build-and-push.sh
+
+# 2. Force ECS services to redeploy
+./infra/scripts/force-deploy.sh
+
+# 3. (Optional) Run migrations if database schema changed
+./infra/scripts/run-migration.sh
+```
+
+### Deploy Frontend Changes
+
+```bash
+# Simply push to GitHub - Amplify handles the rest!
+git add frontend/
+git commit -m "Update frontend"
+git push origin main
+
+# Monitor build in AWS Console → Amplify → rex-backend-dev-frontend
+```
+
+### Deploy Infrastructure Changes
+
+```bash
+cd infra
+pulumi preview  # Review changes
+pulumi up       # Apply changes
+```
 
 ## Updating the Stack
 

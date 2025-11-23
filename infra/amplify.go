@@ -38,15 +38,12 @@ frontend:
     paths:
       - frontend/node_modules/**/*`
 
-	// Create Amplify App
-	amplifyApp, err := amplify.NewApp(ctx, fmt.Sprintf("%s-%s-frontend", projectName, environment), &amplify.AppArgs{
+	// Create Amplify App arguments
+	amplifyArgs := &amplify.AppArgs{
 		Name:       pulumi.String(fmt.Sprintf("%s-%s-frontend", projectName, environment)),
 		Repository: pulumi.String(githubRepo),
 		Platform:   pulumi.String("WEB"),
 		BuildSpec:  pulumi.String(buildSpec),
-
-		// GitHub access token (optional if repo is public, but recommended for better rate limits)
-		AccessToken: pulumi.String(githubToken),
 
 		// Environment variables for the frontend build
 		EnvironmentVariables: pulumi.StringMap{
@@ -76,7 +73,15 @@ frontend:
 			"Environment": tags["Environment"],
 			"ManagedBy":   tags["ManagedBy"],
 		},
-	})
+	}
+
+	// Only set AccessToken if provided (required for private repos, optional for public)
+	if githubToken != "" {
+		amplifyArgs.AccessToken = pulumi.String(githubToken)
+	}
+
+	// Create Amplify App
+	amplifyApp, err := amplify.NewApp(ctx, fmt.Sprintf("%s-%s-frontend", projectName, environment), amplifyArgs)
 	if err != nil {
 		return nil, err
 	}
