@@ -164,15 +164,21 @@ func (h *UserHandler) GetUserDetails(c *gin.Context) {
 
 // ListUsers godoc
 // @Summary List all users
-// @Description Fetches ALL users from SuperTokens including system users
+// @Description Fetches ALL users from SuperTokens with smart search and filtering
 // @Tags users
 // @Produce json
 // @Param email query string false "Filter by email (partial match)"
+// @Param name query string false "Filter by name (partial match)"
+// @Param user_id query string false "Filter by exact user ID"
+// @Param exclude_system query string false "Exclude system users (true/false)"
 // @Success 200 {object} response.Response{data=[]UserDetailsResponse}
 // @Failure 500 {object} response.Response
 // @Router /api/v1/users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	emailFilter := c.Query("email")
+	nameFilter := c.Query("name")
+	userIDFilter := c.Query("user_id")
+	excludeSystemStr := c.Query("exclude_system")
 
 	// Pagination parameters
 	page := 1
@@ -190,8 +196,13 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		}
 	}
 
+	excludeSystem := excludeSystemStr == "true"
+
 	h.logger.Info("List users requested",
 		zap.String("email_filter", emailFilter),
+		zap.String("name_filter", nameFilter),
+		zap.String("user_id_filter", userIDFilter),
+		zap.Bool("exclude_system", excludeSystem),
 		zap.Int("page", page),
 		zap.Int("page_size", pageSize))
 
@@ -263,6 +274,19 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	// Fetch user details from SuperTokens for each user ID
 	var allUsers []UserDetailsResponse
 	for userID := range allUserIDsMap {
+		// Check if system user
+		isSystem := systemUserMap[userID]
+
+		// Apply exclude_system filter early
+		if excludeSystem && isSystem {
+			continue
+		}
+
+		// If user_id filter is provided, only process that specific user
+		if userIDFilter != "" && userID != userIDFilter {
+			continue
+		}
+
 		userInfo, err := emailpassword.GetUserByID(userID)
 		if err != nil {
 			h.logger.Warn("Failed to fetch user from SuperTokens",
@@ -284,9 +308,6 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 			Where("status != ?", "inactive").
 			Count(&tenantCount)
 
-		// Check if system user
-		isSystem := systemUserMap[userID]
-
 		userDetails := UserDetailsResponse{
 			ID:          userInfo.ID,
 			UserID:      userInfo.ID,
@@ -297,10 +318,16 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 			IsSystem:    isSystem,
 		}
 
-		// Apply email filter if provided (case-insensitive)
-		if emailFilter == "" || strings.Contains(strings.ToLower(userDetails.Email), strings.ToLower(emailFilter)) {
-			allUsers = append(allUsers, userDetails)
+		// Apply filters (case-insensitive)
+		if emailFilter != "" && !strings.Contains(strings.ToLower(userDetails.Email), strings.ToLower(emailFilter)) {
+			continue
 		}
+
+		if nameFilter != "" && !strings.Contains(strings.ToLower(userDetails.Name), strings.ToLower(nameFilter)) {
+			continue
+		}
+
+		allUsers = append(allUsers, userDetails)
 	}
 
 	// Calculate pagination
@@ -329,7 +356,10 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		zap.Int("page_size", pageSize),
 		zap.Int("total_pages", totalPages),
 		zap.Int("returned", len(allUsers)),
-		zap.String("email_filter", emailFilter))
+		zap.String("email_filter", emailFilter),
+		zap.String("name_filter", nameFilter),
+		zap.String("user_id_filter", userIDFilter),
+		zap.Bool("exclude_system", excludeSystem))
 
 	// Return paginated response
 	c.JSON(http.StatusOK, gin.H{

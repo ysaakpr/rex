@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, User, Loader2, Filter, CheckCircle, XCircle, X, Cpu } from 'lucide-react';
+import { Search, User, Loader2, Filter, CheckCircle, XCircle, X, Cpu, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -13,13 +13,18 @@ export function UsersPage() {
   
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [emailFilter, setEmailFilter] = useState('');
   const [nameFilter, setNameFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [showSystemUsers, setShowSystemUsers] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
+  const isFirstLoad = useRef(true);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -28,8 +33,21 @@ export function UsersPage() {
   const [totalPages, setTotalPages] = useState(0);
 
   useEffect(() => {
-    loadUsers();
-  }, [currentPage, pageSize, emailFilter, statusFilter]);
+    // Debounce search query
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      loadUsers();
+    }, 300); // 300ms debounce
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [currentPage, pageSize, searchQuery, showSystemUsers]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,10 +61,26 @@ export function UsersPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Helper function to check if string is a valid UUID
+  const isUUID = (str) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  };
+
+  // Helper function to check if string is an email
+  const isEmail = (str) => {
+    return str.includes('@');
+  };
+
   const loadUsers = async () => {
-    console.log('[UsersPage] Loading users...', { currentPage, pageSize, emailFilter, statusFilter });
+    console.log('[UsersPage] Loading users...', { currentPage, pageSize, searchQuery, showSystemUsers });
     try {
-      setLoading(true);
+      // Show appropriate loading indicator
+      if (isFirstLoad.current) {
+        setInitialLoading(true);
+      } else {
+        setFilterLoading(true);
+      }
       setError('');
       
       // Build query parameters
@@ -55,12 +89,29 @@ export function UsersPage() {
         page_size: pageSize.toString(),
       });
       
-      if (emailFilter) {
-        params.append('email', emailFilter);
+      // Smart search logic
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim();
+        
+        if (isEmail(query)) {
+          // Email search
+          params.append('email', query);
+          console.log('[UsersPage] Searching by email:', query);
+        } else if (isUUID(query)) {
+          // UUID/ID search
+          params.append('user_id', query);
+          console.log('[UsersPage] Searching by ID:', query);
+        } else {
+          // Name search (fallback)
+          params.append('name', query);
+          console.log('[UsersPage] Searching by name:', query);
+        }
       }
       
-      // Note: Status filter would need backend support
-      // For now, we'll handle it client-side if needed
+      // System user filter
+      if (!showSystemUsers) {
+        params.append('exclude_system', 'true');
+      }
       
       const response = await fetch(`/api/v1/users?${params.toString()}`, {
         credentials: 'include'
@@ -81,6 +132,11 @@ export function UsersPage() {
       setTotalCount(data.total_count || 0);
       setTotalPages(data.total_pages || 0);
       setCurrentPage(data.page || 1);
+      
+      // Mark first load as complete
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+      }
     } catch (err) {
       console.error('[UsersPage] Error loading users:', err);
       setError(err.message);
@@ -89,34 +145,24 @@ export function UsersPage() {
       setTotalCount(0);
       setTotalPages(0);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
+      setFilterLoading(false);
     }
   };
 
   const hasActiveFilters = () => {
-    return emailFilter !== '' || nameFilter !== '' || statusFilter !== 'all';
+    return searchQuery !== '' || !showSystemUsers;
   };
 
   const clearAllFilters = () => {
-    setEmailFilter('');
-    setNameFilter('');
-    setStatusFilter('all');
+    setSearchQuery('');
+    setShowSystemUsers(false);
     setCurrentPage(1); // Reset to first page
   };
 
-  const removeFilter = (filterType) => {
-    switch(filterType) {
-      case 'email':
-        setEmailFilter('');
-        break;
-      case 'name':
-        setNameFilter('');
-        break;
-      case 'status':
-        setStatusFilter('all');
-        break;
-    }
-    setCurrentPage(1); // Reset to first page when removing filter
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page on search
   };
 
   const handlePageChange = (page) => {
@@ -125,22 +171,7 @@ export function UsersPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleFilterChange = (filterType, value) => {
-    switch(filterType) {
-      case 'email':
-        setEmailFilter(value);
-        break;
-      case 'name':
-        setNameFilter(value);
-        break;
-      case 'status':
-        setStatusFilter(value);
-        break;
-    }
-    setCurrentPage(1); // Reset to first page on filter change
-  };
-
-  if (loading) {
+  if (initialLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -157,66 +188,53 @@ export function UsersPage() {
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
           <p className="text-muted-foreground mt-2">
             {totalCount} total {totalCount === 1 ? 'user' : 'users'}
+            {!showSystemUsers && ' (excluding system users)'}
           </p>
         </div>
         
-        {/* Filter Button - Moved to top right */}
-        <div className="relative" ref={filterDropdownRef}>
+        {/* Search and Filters */}
+        <div className="flex items-center gap-3">
+          {/* Smart Search Input */}
+          <div className="relative w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or ID..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 pr-10"
+            />
+            {filterLoading ? (
+              <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-primary" />
+            ) : searchQuery ? (
+              <X 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 cursor-pointer text-muted-foreground hover:text-destructive" 
+                onClick={() => handleSearchChange('')}
+              />
+            ) : null}
+          </div>
+
+          {/* System Users Toggle */}
           <Button
-            variant="outline"
+            variant={showSystemUsers ? "default" : "outline"}
             size="default"
-            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-            className="relative"
+            onClick={() => {
+              setShowSystemUsers(!showSystemUsers);
+              setCurrentPage(1);
+            }}
+            className="gap-2 min-w-[180px]"
           >
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-            {hasActiveFilters() && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-background"></span>
+            {showSystemUsers ? (
+              <>
+                <Eye className="h-4 w-4" />
+                Hide System Users
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-4 w-4" />
+                Show System Users
+              </>
             )}
           </Button>
-
-          {/* Dropdown Menu */}
-          {showFilterDropdown && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-background border rounded-lg shadow-lg z-50 p-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email-filter">Filter by Email</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email-filter"
-                      placeholder="user@example.com"
-                      value={emailFilter}
-                      onChange={(e) => handleFilterChange('email', e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name-filter">Filter by Name</Label>
-                  <Input
-                    id="name-filter"
-                    placeholder="Search names..."
-                    value={nameFilter}
-                    onChange={(e) => handleFilterChange('name', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status-filter">Status</Label>
-                  <select
-                    id="status-filter"
-                    value={statusFilter}
-                    onChange={(e) => handleFilterChange('status', e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="all">All Users</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -234,32 +252,21 @@ export function UsersPage() {
 
       {/* Active Filter Chips */}
       {hasActiveFilters() && (
-      <div className="flex items-center gap-3 flex-wrap">
-          {emailFilter && (
+        <div className="flex items-center gap-3 flex-wrap">
+          {searchQuery && (
             <Badge variant="secondary" className="gap-1 px-3 py-1">
-              Email: {emailFilter}
+              <Search className="h-3 w-3" />
+              Search: {searchQuery}
               <X 
                 className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                onClick={() => removeFilter('email')}
+                onClick={() => handleSearchChange('')}
               />
             </Badge>
           )}
-          {nameFilter && (
+          {!showSystemUsers && (
             <Badge variant="secondary" className="gap-1 px-3 py-1">
-              Name: {nameFilter}
-              <X 
-                className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                onClick={() => removeFilter('name')}
-              />
-            </Badge>
-          )}
-          {statusFilter !== 'all' && (
-            <Badge variant="secondary" className="gap-1 px-3 py-1">
-              Status: {statusFilter}
-              <X 
-                className="h-3 w-3 cursor-pointer hover:text-destructive" 
-                onClick={() => removeFilter('status')}
-              />
+              <EyeOff className="h-3 w-3" />
+              System users hidden
             </Badge>
           )}
           <Button
@@ -270,11 +277,11 @@ export function UsersPage() {
           >
             Clear all
           </Button>
-      </div>
+        </div>
       )}
 
       {/* Pagination Info */}
-      {!loading && totalCount > 0 && (
+      {!initialLoading && totalCount > 0 && (
         <PaginationInfo
           currentPage={currentPage}
           pageSize={pageSize}
@@ -283,13 +290,23 @@ export function UsersPage() {
       )}
 
       {/* Users List */}
-      <div className="space-y-3">
+      <div className="space-y-3 relative">
+        {/* Subtle loading overlay when filtering */}
+        {filterLoading && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 rounded-lg flex items-center justify-center">
+            <div className="flex items-center gap-2 bg-background border rounded-lg px-4 py-2 shadow-lg">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Updating results...</span>
+            </div>
+          </div>
+        )}
+        
         {users.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground border rounded-lg bg-muted/20">
             <User className="mx-auto h-12 w-12 mb-4 opacity-50" />
             <p className="text-sm">No users found</p>
             <p className="text-xs mt-1">
-              {emailFilter || nameFilter ? 'Try adjusting your filters' : 'No users registered yet'}
+              {searchQuery ? 'Try adjusting your search query' : 'No users registered yet'}
             </p>
           </div>
         ) : (
@@ -345,7 +362,7 @@ export function UsersPage() {
       </div>
 
       {/* Pagination Controls */}
-      {!loading && totalPages > 0 && (
+      {!initialLoading && totalPages > 0 && (
         <div className="flex flex-col items-center gap-4 pt-4">
           <Pagination
             currentPage={currentPage}
