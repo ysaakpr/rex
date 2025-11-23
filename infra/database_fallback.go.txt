@@ -1,0 +1,17 @@
+// Alternative Aurora configuration (if Serverless v2 has issues)
+// Replace in database.go if needed
+
+// Option 1: Aurora Serverless v2 with PostgreSQL 14 (more stable)
+EngineVersion: pulumi.String("14.9"),
+
+// Option 2: Regular Aurora (not Serverless)
+// Remove Serverlessv2ScalingConfiguration and use:
+InstanceClass: pulumi.String("db.t4g.micro"),
+
+// Option 3: Regular RDS PostgreSQL (cheapest for dev)
+// Use rds.NewInstance instead of rds.NewCluster
+Engine: pulumi.String("postgres"),
+EngineVersion: pulumi.String("15.5"),
+InstanceClass: pulumi.String("db.t4g.micro"),
+AllocatedStorage: pulumi.Int(20),
+

@@ -37,12 +37,12 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 		return nil, err
 	}
 
-	// Create Aurora Serverless v2 Cluster
-	cluster, err := rds.NewCluster(ctx, fmt.Sprintf("%s-%s-aurora-cluster", projectName, environment), &rds.ClusterArgs{
+	// Prepare cluster configuration
+	clusterArgs := &rds.ClusterArgs{
 		ClusterIdentifier:   pulumi.String(fmt.Sprintf("%s-%s-aurora-cluster", projectName, environment)),
 		Engine:              pulumi.String("aurora-postgresql"),
 		EngineMode:          pulumi.String("provisioned"),
-		EngineVersion:       pulumi.String("15.4"),
+		EngineVersion:       pulumi.String("15.5"), // Updated to more widely available version
 		DatabaseName:        pulumi.String(mainDBName),
 		MasterUsername:      pulumi.String(masterUsername),
 		MasterPassword:      masterPassword,
@@ -52,11 +52,10 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 			MaxCapacity: pulumi.Float64(2.0), // 2 ACUs max
 			MinCapacity: pulumi.Float64(0.5), // 0.5 ACUs min
 		},
-		BackupRetentionPeriod:   pulumi.Int(7),
-		PreferredBackupWindow:   pulumi.String("03:00-04:00"),
-		SkipFinalSnapshot:       pulumi.Bool(environment == "dev"), // Skip snapshot in dev
-		FinalSnapshotIdentifier: pulumi.String(fmt.Sprintf("%s-%s-final-snapshot", projectName, environment)).ToStringPtrOutput(),
-		ApplyImmediately:        pulumi.Bool(true),
+		BackupRetentionPeriod: pulumi.Int(7),
+		PreferredBackupWindow: pulumi.String("03:00-04:00"),
+		SkipFinalSnapshot:     pulumi.Bool(environment == "dev"), // Skip snapshot in dev
+		ApplyImmediately:      pulumi.Bool(true),
 		EnabledCloudwatchLogsExports: pulumi.StringArray{
 			pulumi.String("postgresql"),
 		},
@@ -66,7 +65,15 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 			"Environment": tags["Environment"],
 			"ManagedBy":   tags["ManagedBy"],
 		},
-	})
+	}
+
+	// Only set FinalSnapshotIdentifier if we're NOT skipping final snapshot
+	if environment != "dev" {
+		clusterArgs.FinalSnapshotIdentifier = pulumi.String(fmt.Sprintf("%s-%s-final-snapshot-%d", projectName, environment, 1))
+	}
+
+	// Create Aurora Serverless v2 Cluster
+	cluster, err := rds.NewCluster(ctx, fmt.Sprintf("%s-%s-aurora-cluster", projectName, environment), clusterArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +84,7 @@ func createDatabase(ctx *pulumi.Context, projectName, environment string, networ
 		ClusterIdentifier:  cluster.ID(),
 		InstanceClass:      pulumi.String("db.serverless"),
 		Engine:             pulumi.String("aurora-postgresql"),
-		EngineVersion:      pulumi.String("15.4"),
+		EngineVersion:      pulumi.String("15.5"), // Match cluster version
 		PubliclyAccessible: pulumi.Bool(false),
 		Tags: pulumi.StringMap{
 			"Name":        pulumi.String(fmt.Sprintf("%s-%s-aurora-instance-1", projectName, environment)),
