@@ -195,9 +195,11 @@ func initSuperTokens(cfg *config.Config) error {
 		log.Println("Google OAuth disabled - no credentials provided")
 	}
 
-	// Add session recipe
+	// Add session recipe with automatic secure cookie detection
 	recipeList = append(recipeList, session.Init(&sessmodels.TypeInput{
-		CookieSecure:   ptrBool(false),   // Disable secure cookies for local development
+		// Don't set CookieSecure - let SuperTokens auto-detect from the request protocol
+		// This allows multiple frontends (HTTP and HTTPS) to work with the same backend
+		// SuperTokens will set secure=true for HTTPS requests and secure=false for HTTP requests
 		CookieSameSite: ptrString("lax"), // Allow cross-origin requests with lax policy
 		// Don't set CookieDomain - let it default to the request domain
 		// This allows cookies to work properly with the frontend proxy
