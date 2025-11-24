@@ -129,6 +129,60 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 	response.OK(c, tenantResp)
 }
 
+// ListAllTenants godoc
+// @Summary List all tenants (platform admins only)
+// @Tags tenants
+// @Produce json
+// @Param page query int false "Page number"
+// @Param page_size query int false "Page size"
+// @Success 200 {object} response.Response{data=models.PaginatedResponse}
+// @Router /platform/tenants [get]
+func (h *TenantHandler) ListAllTenants(c *gin.Context) {
+	var pagination models.PaginationParams
+	if err := c.ShouldBindQuery(&pagination); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+
+	tenants, total, err := h.tenantService.GetAllTenants(&pagination)
+	if err != nil {
+		response.InternalServerError(c, err)
+		return
+	}
+
+	// Convert to response format and add member counts
+	tenantResponses := make([]*models.TenantResponse, len(tenants))
+	for i, tenant := range tenants {
+		tenantResp := tenant.ToResponse()
+
+		// Count active members for this tenant
+		var memberCount int64
+		h.db.Table("tenant_members").
+			Where("tenant_id = ?", tenant.ID).
+			Where("status = ?", "active").
+			Count(&memberCount)
+
+		tenantResp.MemberCount = int(memberCount)
+		tenantResponses[i] = tenantResp
+	}
+
+	pagination.Normalize()
+	totalPages := int(total) / pagination.PageSize
+	if int(total)%pagination.PageSize > 0 {
+		totalPages++
+	}
+
+	result := models.PaginatedResponse{
+		Data:       tenantResponses,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalCount: total,
+		TotalPages: totalPages,
+	}
+
+	response.OK(c, result)
+}
+
 // ListTenants godoc
 // @Summary List user's tenants
 // @Tags tenants

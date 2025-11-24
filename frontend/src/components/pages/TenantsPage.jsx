@@ -22,16 +22,45 @@ export function TenantsPage() {
   const [tenantToDelete, setTenantToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
-    loadTenants();
+    checkPlatformAdmin();
   }, []);
+
+  useEffect(() => {
+    if (!checkingAdmin) {
+      loadTenants();
+    }
+  }, [checkingAdmin, isPlatformAdmin]);
+
+  const checkPlatformAdmin = async () => {
+    try {
+      const response = await fetch('/api/v1/platform/admins/check', {
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIsPlatformAdmin(data.data?.is_platform_admin || false);
+      }
+    } catch (err) {
+      console.error('Error checking platform admin:', err);
+    } finally {
+      setCheckingAdmin(false);
+    }
+  };
 
   const loadTenants = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await fetch('/api/v1/tenants', {
+      
+      // Use platform endpoint if user is platform admin, otherwise use regular endpoint
+      const endpoint = isPlatformAdmin ? '/api/v1/platform/tenants' : '/api/v1/tenants';
+      
+      const response = await fetch(endpoint, {
         credentials: 'include'
       });
 
@@ -124,7 +153,10 @@ export function TenantsPage() {
             )}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Manage and monitor all tenants in your platform
+            {isPlatformAdmin 
+              ? 'Manage and monitor all tenants in the platform'
+              : 'Manage and monitor your tenants'
+            }
           </p>
         </div>
         <div className="flex items-center gap-3">

@@ -19,6 +19,7 @@ type TenantService interface {
 	GetTenant(id uuid.UUID) (*models.Tenant, error)
 	GetTenantBySlug(slug string) (*models.Tenant, error)
 	GetUserTenants(userID string, pagination *models.PaginationParams) ([]*models.Tenant, int64, error)
+	GetAllTenants(pagination *models.PaginationParams) ([]*models.Tenant, int64, error)
 	UpdateTenant(id uuid.UUID, input *models.UpdateTenantInput) (*models.Tenant, error)
 	DeleteTenant(id uuid.UUID) error
 	GetTenantStatus(id uuid.UUID) (models.TenantStatus, error)
@@ -190,6 +191,11 @@ func (s *tenantService) GetUserTenants(userID string, pagination *models.Paginat
 	// For simplicity, we'll return the tenants the user created
 	// In a full implementation, you'd query by tenant IDs
 	return s.tenantRepo.GetByCreatorID(userID, pagination)
+}
+
+// GetAllTenants returns all tenants in the system (for platform admins)
+func (s *tenantService) GetAllTenants(pagination *models.PaginationParams) ([]*models.Tenant, int64, error) {
+	return s.tenantRepo.List(pagination)
 }
 
 func (s *tenantService) UpdateTenant(id uuid.UUID, input *models.UpdateTenantInput) (*models.Tenant, error) {
