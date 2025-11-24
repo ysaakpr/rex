@@ -13,7 +13,7 @@ export function ManagedTenantOnboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [relations, setRelations] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [createdTenantId, setCreatedTenantId] = useState(null);
   const [createdTenantName, setCreatedTenantName] = useState('');
@@ -34,7 +34,7 @@ export function ManagedTenantOnboarding() {
   const [userDetails, setUserDetails] = useState(null);
 
   useEffect(() => {
-    loadRelations();
+    loadRoles();
   }, []);
 
   // Debounced email check
@@ -52,29 +52,29 @@ export function ManagedTenantOnboarding() {
     return () => clearTimeout(timeoutId);
   }, [formData.ownerEmail]);
 
-  const loadRelations = async () => {
+  const loadRoles = async () => {
     try {
-      const response = await fetch('/api/v1/relations', {
+      const response = await fetch('/api/v1/roles', {
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to load relations');
+        throw new Error('Failed to load roles');
       }
 
       const data = await response.json();
-      setRelations(data.data || []);
+      setRoles(data.data || []);
 
-      // Auto-select 'Admin' relation if available
+      // Auto-select 'Admin' role if available
       if (data.data) {
-        const adminRelation = data.data.find(r => r.name.toLowerCase() === 'admin');
-        if (adminRelation) {
-          setFormData(prev => ({ ...prev, roleId: adminRelation.id }));
+        const adminRole = data.data.find(r => r.name.toLowerCase() === 'admin');
+        if (adminRole) {
+          setFormData(prev => ({ ...prev, roleId: adminRole.id }));
         }
       }
     } catch (err) {
-      console.error('Error loading relations:', err);
-      setError('Failed to load relations. Please refresh the page.');
+      console.error('Error loading roles:', err);
+      setError('Failed to load roles. Please refresh the page.');
     }
   };
 
@@ -141,7 +141,7 @@ export function ManagedTenantOnboarding() {
       return;
     }
 
-    // Ensure Admin relation is selected
+    // Ensure Admin role is selected
     if (!formData.roleId) {
       setError('Unable to determine Admin role. Please refresh the page and try again.');
       setLoading(false);

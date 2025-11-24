@@ -5,7 +5,7 @@ function Members() {
   const { tenantId } = useParams();
   const navigate = useNavigate();
   const [members, setMembers] = useState([]);
-  const [relations, setRelations] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -15,7 +15,7 @@ function Members() {
 
   useEffect(() => {
     loadMembers();
-    loadRelations();
+    loadRoles();
   }, [tenantId]);
 
   const loadMembers = async () => {
@@ -37,19 +37,19 @@ function Members() {
     }
   };
 
-  const loadRelations = async () => {
+  const loadRoles = async () => {
     try {
       const response = await fetch(`/api/v1/roles`, {
         credentials: 'include'
       });
       
-      if (!response.ok) throw new Error('Failed to load relations');
+      if (!response.ok) throw new Error('Failed to load roles');
       
       const data = await response.json();
       // API returns { success: true, data: [...] }
-      setRelations(data.data || []);
+      setRoles(data.data || []);
     } catch (err) {
-      console.error('Failed to load relations:', err);
+      console.error('Failed to load roles:', err);
     }
   };
 
@@ -143,9 +143,8 @@ function Members() {
           <thead>
             <tr>
               <th>User ID</th>
-              <th>Relation</th>
+              <th>Role</th>
               <th>Status</th>
-              <th>Roles</th>
               <th>Joined</th>
               <th>Actions</th>
             </tr>
@@ -153,7 +152,7 @@ function Members() {
           <tbody>
             {members.length === 0 ? (
               <tr>
-                <td colSpan="6" className="text-center">No members found</td>
+                <td colSpan="5" className="text-center">No members found</td>
               </tr>
             ) : (
               members.map(member => (
@@ -163,24 +162,13 @@ function Members() {
                   </td>
                   <td>
                     <span className="relation-badge">
-                      {member.relation?.name || 'N/A'}
+                      {member.role?.name || 'N/A'}
                     </span>
                   </td>
                   <td>
                     <span className={getStatusBadgeClass(member.status)}>
                       {member.status}
                     </span>
-                  </td>
-                  <td>
-                    {member.roles?.length > 0 ? (
-                      <div className="roles-list">
-                        {member.roles.map(role => (
-                          <span key={role.id} className="role-tag">{role.name}</span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted">No roles</span>
-                    )}
                   </td>
                   <td>{new Date(member.joined_at).toLocaleDateString()}</td>
                   <td>
@@ -227,16 +215,16 @@ function Members() {
                 <small>The user must already exist in SuperTokens</small>
               </div>
               <div className="form-group">
-                <label>Relation *</label>
+                <label>Role *</label>
                 <select
                   value={newMember.role_id}
                   onChange={(e) => setNewMember({ ...newMember, role_id: e.target.value })}
                   required
                 >
-                  <option value="">Select relation...</option>
-                  {relations.map(relation => (
-                    <option key={relation.id} value={relation.id}>
-                      {relation.name} - {relation.description}
+                  <option value="">Select role...</option>
+                  {roles.map(role => (
+                    <option key={role.id} value={role.id}>
+                      {role.name} - {role.description}
                     </option>
                   ))}
                 </select>
@@ -270,15 +258,15 @@ function Members() {
                 />
               </div>
               <div className="form-group">
-                <label>Relation *</label>
+                <label>Role *</label>
                 <select
                   value={selectedMember.role_id}
                   onChange={(e) => setSelectedMember({ ...selectedMember, role_id: e.target.value })}
                   required
                 >
-                  {relations.map(relation => (
-                    <option key={relation.id} value={relation.id}>
-                      {relation.name} - {relation.description}
+                  {roles.map(role => (
+                    <option key={role.id} value={role.id}>
+                      {role.name} - {role.description}
                     </option>
                   ))}
                 </select>
