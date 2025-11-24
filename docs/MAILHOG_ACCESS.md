@@ -59,14 +59,14 @@ MailHog is an email testing tool that captures all outgoing emails from your app
 ### Nginx Configuration
 
 ```nginx
-# Upstream definition
+# Upstream definition (port 80 is MailHog's internal web UI port)
 upstream mailhog {
-    server mailhog:8025;
+    server mailhog:80;
 }
 
-# Location block
-location /inbox {
-    proxy_pass http://mailhog;
+# Location blocks
+location /inbox/ {
+    proxy_pass http://mailhog/;
     proxy_http_version 1.1;
     
     # WebSocket support for real-time updates
@@ -90,9 +90,13 @@ mailhog:
   image: nfqlt/mailhog:arm64
   container_name: utm-mailhog
   ports:
-    - "1025:1025"  # SMTP port (internal)
-    - "8025:8025"  # Web UI (now proxied via nginx)
+    - "1025:1025"  # SMTP port (for receiving emails)
+    - "8025:8025"  # Web UI port (mapped from internal port 80)
+  networks:
+    - utm-network
 ```
+
+**Important:** Inside the Docker network, MailHog's web UI runs on port **80**, not 8025. Port 8025 is only for host access.
 
 ### Application Configuration
 
