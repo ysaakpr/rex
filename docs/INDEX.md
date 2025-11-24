@@ -11,6 +11,7 @@
 - **[API Examples](API_EXAMPLES.md)** - API endpoint examples and usage
 
 ### Implementation Summaries
+- **[Platform Admin Fixes Complete](PLATFORM_ADMIN_FIXES_COMPLETE.md)** - Complete platform admin access fixes (list & details) ⭐ NEW
 - **[RBAC Refactoring Summary](RBAC_REFACTORING_SUMMARY.md)** - Complete RBAC terminology refactoring (Relations→Roles, Roles→Policies)
 - **[Phase 2 Improvements Complete](PHASE2_IMPROVEMENTS_COMPLETE.md)** - Tenant management experience improvements
 
@@ -77,6 +78,7 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 - [Frontend Dockerfile.prod](../frontend/Dockerfile.prod) - Production frontend container
 
 ### Troubleshooting
+- **[PLATFORM_ADMIN_TENANT_ACCESS_FIX.md](PLATFORM_ADMIN_TENANT_ACCESS_FIX.md)** - Platform admin 403 errors when viewing tenants ⭐ NEW
 - [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md#troubleshooting) - Auth issues
 - [03-QUICK_TEST.md](changedoc/03-QUICK_TEST.md#troubleshooting) - Common problems
 - [01-TESTING.md](changedoc/01-TESTING.md#troubleshooting) - Testing issues

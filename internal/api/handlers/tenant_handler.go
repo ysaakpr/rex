@@ -129,6 +129,41 @@ func (h *TenantHandler) GetTenant(c *gin.Context) {
 	response.OK(c, tenantResp)
 }
 
+// GetTenantForPlatformAdmin godoc
+// @Summary Get tenant by ID (platform admins only, no membership required)
+// @Tags tenants
+// @Produce json
+// @Param id path string true "Tenant ID"
+// @Success 200 {object} response.Response{data=models.TenantResponse}
+// @Router /platform/tenants/{id} [get]
+func (h *TenantHandler) GetTenantForPlatformAdmin(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+
+	tenant, err := h.tenantService.GetTenant(id)
+	if err != nil {
+		response.NotFound(c, err.Error())
+		return
+	}
+
+	tenantResp := tenant.ToResponse()
+
+	// Count active members for this tenant
+	var memberCount int64
+	h.db.Table("tenant_members").
+		Where("tenant_id = ?", tenant.ID).
+		Where("status = ?", "active").
+		Count(&memberCount)
+
+	tenantResp.MemberCount = int(memberCount)
+
+	response.OK(c, tenantResp)
+}
+
 // ListAllTenants godoc
 // @Summary List all tenants (platform admins only)
 // @Tags tenants

@@ -17,17 +17,47 @@ export function TenantDetailsPage() {
   const [error, setError] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   useEffect(() => {
-    loadTenantDetails();
-  }, [id]);
+    checkPlatformAdmin();
+  }, []);
+
+  useEffect(() => {
+    if (isPlatformAdmin !== null) {
+      loadTenantDetails();
+    }
+  }, [id, isPlatformAdmin]);
+
+  const checkPlatformAdmin = async () => {
+    try {
+      const response = await fetch('/api/v1/platform/admins/check', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIsPlatformAdmin(data.data?.is_platform_admin || false);
+      } else {
+        setIsPlatformAdmin(false);
+      }
+    } catch (err) {
+      console.error('Error checking platform admin status:', err);
+      setIsPlatformAdmin(false);
+    }
+  };
 
   const loadTenantDetails = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const response = await fetch(`/api/v1/tenants/${id}`, {
+      // Use platform admin endpoint if user is a platform admin
+      const endpoint = isPlatformAdmin 
+        ? `/api/v1/platform/tenants/${id}`
+        : `/api/v1/tenants/${id}`;
+      
+      const response = await fetch(endpoint, {
         credentials: 'include'
       });
 

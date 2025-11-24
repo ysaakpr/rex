@@ -120,6 +120,7 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 
 				// Tenants management (all tenants)
 				platform.GET("/tenants", deps.TenantHandler.ListAllTenants)
+				platform.GET("/tenants/:id", deps.TenantHandler.GetTenantForPlatformAdmin)
 
 				// System users (M2M authentication)
 				systemUsers := platform.Group("/system-users")
