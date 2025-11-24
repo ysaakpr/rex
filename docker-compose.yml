@@ -88,15 +88,16 @@ services:
     networks:
       - utm-network
 
-  # MailHog for email testing
+  # MailHog for email testing (ARM/AMD64 compatible)
   mailhog:
-    image: mailhog/mailhog:latest
+    image: nfqlt/mailhog:latest
     container_name: utm-mailhog
     ports:
       - "1025:1025"  # SMTP
       - "8025:8025"  # Web UI
     networks:
       - utm-network
+    restart: unless-stopped
 
   # Backend API Service
   api:

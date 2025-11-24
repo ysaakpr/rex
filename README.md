@@ -13,9 +13,9 @@
 ### Core Features
 
 - **Multi-Tenant Architecture**: Complete tenant isolation with self-service and managed onboarding
-- **Authentication**: SuperTokens integration for secure user authentication
-- **RBAC System**: Flexible role-based access control with permissions across multiple services
-- **Member Management**: Invite users, manage tenant memberships with different relations
+- **Authentication**: SuperTokens integration with cookie-based sessions and optional Google OAuth
+- **RBAC System**: Flexible role-based access control with policies and permissions across multiple services
+- **Member Management**: Invite users, manage tenant memberships with different roles (Admin, Writer, Viewer, Basic)
 - **Background Jobs**: Reliable asynchronous job processing with Redis/Asynq
 - **Tenant Initialization**: Automated tenant setup across multiple backend services
 
@@ -45,27 +45,31 @@
 ### System Components
 
 ```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
+┌──────────────┐
+│   Browser    │
+└──────┬───────┘
+       │ http://localhost
+       ↓
+┌──────────────┐
+│    Nginx     │  ← Reverse Proxy
+│   Port 80    │
+└──────┬───────┘
        │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  API Gateway    │◄────►│ SuperTokens  │
-│  (Gin Router)   │      │  Auth Core   │
-└────────┬────────┘      └──────────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│   Services      │◄────►│  PostgreSQL  │
-│   Layer         │      │   Database   │
-└────────┬────────┘      └──────────────┘
-         │
-         ▼
-┌─────────────────┐      ┌──────────────┐
-│  Job Queue      │◄────►│    Redis     │
-│  (Asynq)        │      │              │
-└─────────────────┘      └──────────────┘
+   ┌───┴────┬──────────────┐
+   │        │              │
+   ↓        ↓              ↓
+┌────────┐ ┌─────────┐ ┌──────────────┐
+│Frontend│ │Backend  │ │ SuperTokens  │
+│ :3000  │ │API :8080│ │ Core :3567   │
+│(React) │ │  (Gin)  │ │  (Internal)  │
+└────────┘ └────┬────┘ └──────────────┘
+                │
+        ┌───────┼────────┐
+        ↓       ↓        ↓
+   ┌─────────┐ ┌─────┐ ┌────────┐
+   │PostgreSQL│ │Redis│ │MailHog │
+   │  :5432  │ │:6379│ │  :8025 │
+   └─────────┘ └─────┘ └────────┘
 ```
 
 ### Key Design Patterns
@@ -73,13 +77,25 @@
 - **Repository Pattern**: Data access abstraction
 - **Service Layer**: Business logic encapsulation
 - **Dependency Injection**: Loose coupling between components
-- **Middleware Pipeline**: Request processing chain
+- **Middleware Pipeline**: Request processing chain (Auth → Tenant Access → RBAC)
+
+### Security Architecture
+
+- **Authentication**: SuperTokens with cookie-based sessions
+- **Authorization**: RBAC with roles, policies, and permissions
+- **Network Isolation**: Services communicate through internal Docker network
+- **API Gateway**: Nginx reverse proxy as single entry point
+- **Session Management**: HTTP-only cookies with anti-CSRF protection
 
 ## 📦 Prerequisites
 
 - Docker and Docker Compose
-- Go 1.21+ (for local development)
+- Go 1.23+ (for local development)
 - Make (optional, for using Makefile commands)
+
+**Supported Architectures**:
+- ✅ AMD64 (x86_64) - Intel/AMD processors
+- ✅ ARM64 (aarch64) - Apple Silicon (M1/M2/M3), AWS Graviton
 
 ## 🚀 Getting Started
 
@@ -200,63 +216,89 @@ utm-backend/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/tenants/:tenant_id/members` | Add member to tenant |
-| GET | `/api/v1/tenants/:tenant_id/members` | List tenant members |
-| GET | `/api/v1/tenants/:tenant_id/members/:user_id` | Get member details |
-| PATCH | `/api/v1/tenants/:tenant_id/members/:user_id` | Update member |
-| DELETE | `/api/v1/tenants/:tenant_id/members/:user_id` | Remove member |
-| POST | `/api/v1/tenants/:tenant_id/members/:user_id/roles` | Assign roles |
-| DELETE | `/api/v1/tenants/:tenant_id/members/:user_id/roles/:role_id` | Remove role |
+| POST | `/api/v1/tenants/:id/members` | Add member to tenant with role |
+| GET | `/api/v1/tenants/:id/members` | List tenant members |
+| GET | `/api/v1/tenants/:id/members/:user_id` | Get member details |
+| PATCH | `/api/v1/tenants/:id/members/:user_id` | Update member (change role) |
+| DELETE | `/api/v1/tenants/:id/members/:user_id` | Remove member from tenant |
 
 ### Invitations
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/tenants/:tenant_id/invitations` | Invite user |
-| GET | `/api/v1/tenants/:tenant_id/invitations` | List invitations |
+| POST | `/api/v1/tenants/:id/invitations` | Invite user with role |
+| GET | `/api/v1/tenants/:id/invitations` | List tenant invitations |
+| GET | `/api/v1/invitations/:token` | Get invitation details (public) |
 | POST | `/api/v1/invitations/:token/accept` | Accept invitation |
+| POST | `/api/v1/invitations/check-pending` | Auto-accept pending invitations |
 | DELETE | `/api/v1/invitations/:id` | Cancel invitation |
 
-### RBAC
+### RBAC (Role-Based Access Control)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/v1/relations` | List relations |
-| POST | `/api/v1/relations` | Create relation |
-| GET | `/api/v1/roles` | List roles |
-| POST | `/api/v1/roles` | Create role |
-| POST | `/api/v1/roles/:id/permissions` | Assign permissions to role |
+| **Roles** (User's role in tenant) | | |
+| GET | `/api/v1/roles` | List roles (Admin, Writer, Viewer, Basic) |
+| GET | `/api/v1/roles/:id` | Get role details |
+| POST | `/api/v1/platform/roles` | Create role (platform admin only) |
+| **Policies** (Groups of permissions) | | |
+| GET | `/api/v1/policies` | List policies |
+| GET | `/api/v1/policies/:id` | Get policy details |
+| POST | `/api/v1/platform/policies` | Create policy (platform admin only) |
+| **Permissions** (Individual permissions) | | |
 | GET | `/api/v1/permissions` | List permissions |
-| POST | `/api/v1/permissions` | Create permission |
+| GET | `/api/v1/permissions/:id` | Get permission details |
+| POST | `/api/v1/platform/permissions` | Create permission (platform admin only) |
+| **Authorization** | | |
 | POST | `/api/v1/authorize` | Check user permission ⭐ |
+| GET | `/api/v1/permissions/user` | Get user's permissions |
 
 **📖 For detailed RBAC implementation guide (backend & frontend examples), see [RBAC Authorization Guide](docs/RBAC_AUTHORIZATION_GUIDE.md)**
+
+**RBAC Hierarchy**: `User → Member → Role → Policies → Permissions`
 
 ## 🗄 Database Schema
 
 ### Core Tables
 
 - **tenants**: Tenant information and status
-- **relations**: Membership types (Admin, Writer, Viewer, etc.)
-- **tenant_members**: User-tenant associations
-- **roles**: Permission bundles
-- **permissions**: Granular access controls
-- **role_permissions**: Role-permission mappings
-- **member_roles**: Member-role assignments
-- **user_invitations**: Pending user invitations
+- **roles**: User roles in tenant (Admin, Writer, Viewer, Basic)
+- **tenant_members**: User-tenant associations with role
+- **policies**: Groups of permissions (FullAccess, ReadOnly, etc.)
+- **permissions**: Individual permissions (service:entity:action format)
+- **role_policies**: Role-to-policy mappings
+- **policy_permissions**: Policy-to-permission mappings
+- **invitations**: Pending user invitations
+- **platform_admins**: Platform-level administrators
 
-### Relationships
+### RBAC Hierarchy
+
+```
+User
+  ↓
+tenant_members (has role_id)
+  ↓
+roles (Admin, Writer, Viewer, Basic)
+  ↓ (N:M via role_policies)
+policies (FullAccess, ReadOnly, etc.)
+  ↓ (N:M via policy_permissions)
+permissions (tenant-api:member:create, etc.)
+```
+
+### Tenant Relationships
 
 ```
 tenants
   ├── tenant_members (1:N)
-  │     ├── relation (N:1)
-  │     └── roles (N:M)
-  └── user_invitations (1:N)
-  
+  │     └── role (N:1) → Admin, Writer, Viewer, Basic
+  └── invitations (1:N)
+
 roles
-  └── permissions (N:M)
+  └── policies (N:M via role_policies)
+        └── permissions (N:M via policy_permissions)
 ```
+
+**Example**: An Admin role has a FullAccess policy, which contains permissions like `tenant-api:member:create`, `tenant-api:member:delete`, etc.
 
 ## ⚙️ Configuration
 
@@ -331,29 +373,29 @@ make shell-db
 
 ### Self-Onboarding
 
-1. User signs up via SuperTokens
+1. User signs up via SuperTokens (email/password or Google OAuth)
 2. User creates tenant via `POST /api/v1/tenants`
-3. User is automatically added as tenant Admin
+3. User is automatically added as tenant member with **Admin** role
 4. Background job initializes tenant in all services
 5. Tenant status becomes "active"
 
 ### Managed Onboarding
 
-1. Super admin creates tenant with admin email
-2. System creates invitation for specified user
+1. Platform admin creates tenant with owner email via `POST /api/v1/tenants/managed`
+2. System creates invitation for specified user with **Admin** role
 3. Invitation email is sent
-4. User accepts invitation on first login
-5. User becomes tenant admin
+4. User signs up (if new) or logs in (if existing) and accepts invitation
+5. User becomes tenant member with **Admin** role
 6. Tenant initialization is triggered
 
 ### Invitation Flow
 
-1. Tenant admin invites user via email
-2. System creates invitation record
+1. Tenant admin invites user via `POST /api/v1/tenants/:id/invitations`
+2. System creates invitation record with specified role (Admin, Writer, Viewer, or Basic)
 3. Email is sent with invitation link
 4. New user signs up and accepts invitation
 5. Existing user accepts invitation on login
-6. User becomes tenant member with specified relation
+6. User becomes tenant member with the specified role
 
 ## 📊 Background Jobs
 

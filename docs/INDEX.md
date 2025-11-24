@@ -62,6 +62,7 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### Deployment
 - **[AWS Deployment Guide](AWS_DEPLOYMENT_GUIDE.md)** - Complete AWS deployment guide ⭐ NEW
+- **[Platform Compatibility](PLATFORM_COMPATIBILITY.md)** - ARM64/AMD64 multi-arch support ⭐ NEW
 - **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy setup and configuration ⭐ NEW
 - **[Custom Domains Guide](CUSTOM_DOMAINS.md)** - Custom domains and host configuration ⭐ NEW
 - **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Pulumi infrastructure documentation ⭐ NEW
