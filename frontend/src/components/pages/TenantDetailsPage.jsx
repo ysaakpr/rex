@@ -68,11 +68,20 @@ export function TenantDetailsPage() {
       console.log('[TenantDetailsPage] Loading tenant details:', {
         tenantId: id,
         isPlatformAdmin,
-        endpoint
+        endpoint,
+        fullURL: `${window.location.origin}${endpoint}`
       });
+      
+      console.log('[TenantDetailsPage] About to call fetch with endpoint:', endpoint);
       
       const response = await fetch(endpoint, {
         credentials: 'include'
+      });
+      
+      console.log('[TenantDetailsPage] Fetch completed:', {
+        url: response.url,
+        status: response.status,
+        ok: response.ok
       });
 
       if (!response.ok) {
