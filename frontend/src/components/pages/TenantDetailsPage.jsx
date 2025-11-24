@@ -17,7 +17,7 @@ export function TenantDetailsPage() {
   const [error, setError] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(null); // null = not checked yet, true/false = checked
 
   useEffect(() => {
     checkPlatformAdmin();
@@ -128,11 +128,13 @@ export function TenantDetailsPage() {
     loadTenantDetails();
   };
 
-  if (loading) {
+  if (loading || isPlatformAdmin === null) {
     return (
       <div className="flex h-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-3 text-muted-foreground">Loading tenant details...</p>
+        <p className="ml-3 text-muted-foreground">
+          {isPlatformAdmin === null ? 'Checking permissions...' : 'Loading tenant details...'}
+        </p>
       </div>
     );
   }
