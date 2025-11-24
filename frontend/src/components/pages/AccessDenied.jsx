@@ -1,12 +1,47 @@
-import React from 'react';
-import { ShieldAlert, Home, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldAlert, Home, LogOut, User, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from "supertokens-auth-react/recipe/emailpassword";
+import Session from 'supertokens-auth-react/recipe/session';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 
 export function AccessDenied() {
   const navigate = useNavigate();
+  const [userInfo, setUserInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserInfo();
+  }, []);
+
+  const loadUserInfo = async () => {
+    try {
+      // Get user ID from session
+      const userId = await Session.getUserId();
+      
+      // Fetch user details from API
+      const response = await fetch('/api/v1/users/me', {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setUserInfo({
+          userId: userId,
+          email: data.data?.email || 'Unknown'
+        });
+      } else {
+        // Fallback to just userId if API fails
+        setUserInfo({ userId: userId, email: 'Unknown' });
+      }
+    } catch (err) {
+      console.error('Error loading user info:', err);
+      setUserInfo({ userId: 'Unknown', email: 'Unknown' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -42,6 +77,38 @@ export function AccessDenied() {
             This area is exclusively for platform administrators. 
             It seems you've wandered into the VIP lounge!
           </CardDescription>
+          
+          {/* Current User Info */}
+          <div className="rounded-lg border bg-card p-4 text-sm space-y-3">
+            <p className="font-semibold text-foreground mb-2 flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Your Account Details
+            </p>
+            
+            {loading ? (
+              <p className="text-muted-foreground text-center py-2">Loading user info...</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-start gap-2">
+                  <Mail className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="font-mono text-sm break-all">{userInfo?.email}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2">
+                  <User className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs text-muted-foreground">User ID</p>
+                    <p className="font-mono text-xs break-all text-muted-foreground">
+                      {userInfo?.userId}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
           <div className="rounded-lg bg-muted p-4 text-sm">
             <p className="font-semibold text-foreground mb-2">
