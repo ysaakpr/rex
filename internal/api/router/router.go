@@ -46,7 +46,7 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 	{
 		// Public routes - invitation details can be viewed before authentication
 		v1.GET("/invitations/:token", deps.InvitationHandler.GetInvitationByToken)
-		
+
 		// Auth configuration endpoint - returns which OAuth providers are enabled
 		v1.GET("/auth/config", deps.AuthConfigHandler.GetAuthConfig)
 
@@ -61,9 +61,9 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 				tenants.POST("/managed", deps.TenantHandler.CreateManagedTenant)
 				tenants.GET("", deps.TenantHandler.ListTenants)
 
-				// Tenant-scoped routes (require tenant membership) - using :id consistently
+				// Tenant-scoped routes (require tenant membership or platform admin) - using :id consistently
 				tenantScoped := tenants.Group("/:id")
-				tenantScoped.Use(middleware.TenantAccessMiddleware(deps.MemberRepo))
+				tenantScoped.Use(middleware.TenantAccessMiddleware(deps.MemberRepo, deps.DB))
 				{
 					// Tenant info routes
 					tenantScoped.GET("", deps.TenantHandler.GetTenant)

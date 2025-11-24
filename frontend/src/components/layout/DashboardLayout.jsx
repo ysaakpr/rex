@@ -16,18 +16,20 @@ export function DashboardLayout({ children }) {
 
   const loadUserInfo = async () => {
     try {
-      // Get user info from session
-      const response = await fetch('/api/v1/platform/admins/check', {
+      // Get current user info from backend
+      const response = await fetch('/api/v1/users/me', {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
-        // For now, just track if they're an admin
-        // You can enhance this to fetch actual user details from backend
-        setUserInfo({ 
-          userId: 'current-user', // This would come from SuperTokens session
-        });
+        if (data.success && data.data) {
+          setUserInfo({ 
+            userId: data.data.user_id || data.data.id,
+            email: data.data.email,
+            name: data.data.name,
+          });
+        }
       }
     } catch (err) {
       console.error('Error loading user info:', err);

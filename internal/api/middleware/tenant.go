@@ -5,12 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/ysaakpr/rex/internal/models"
 	"github.com/ysaakpr/rex/internal/pkg/response"
 	"github.com/ysaakpr/rex/internal/repository"
+	"gorm.io/gorm"
 )
 
 // TenantAccessMiddleware validates that the user has access to the tenant
-func TenantAccessMiddleware(memberRepo repository.MemberRepository) gin.HandlerFunc {
+// Platform admins can access any tenant without membership
+func TenantAccessMiddleware(memberRepo repository.MemberRepository, db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get user ID from context (set by AuthMiddleware)
 		userID, err := GetUserID(c)
@@ -39,7 +42,19 @@ func TenantAccessMiddleware(memberRepo repository.MemberRepository) gin.HandlerF
 			return
 		}
 
-		// Check if user is a member of the tenant
+		// Check if user is a platform admin - they can access any tenant
+		var admin models.PlatformAdmin
+		err = db.Where("user_id = ?", userID).First(&admin).Error
+		if err == nil {
+			// User is a platform admin - grant access without membership check
+			c.Set("tenantID", tenantID)
+			c.Set("isPlatformAdmin", true)
+			c.Set("platformAdmin", &admin)
+			c.Next()
+			return
+		}
+
+		// Not a platform admin, check tenant membership
 		member, err := memberRepo.GetByTenantAndUser(tenantID, userID)
 		if err != nil || member == nil {
 			response.Forbidden(c, "Access denied: You are not a member of this tenant")

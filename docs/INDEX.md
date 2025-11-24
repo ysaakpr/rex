@@ -78,7 +78,9 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 - [Frontend Dockerfile.prod](../frontend/Dockerfile.prod) - Production frontend container
 
 ### Troubleshooting
+- **[PLATFORM_ADMIN_MIDDLEWARE_FIX.md](PLATFORM_ADMIN_MIDDLEWARE_FIX.md)** - Platform admin middleware for ALL tenant endpoints ⭐ NEW
 - **[PLATFORM_ADMIN_TENANT_ACCESS_FIX.md](PLATFORM_ADMIN_TENANT_ACCESS_FIX.md)** - Platform admin 403 errors when viewing tenants ⭐ NEW
+- **[RACE_CONDITION_FIX.md](RACE_CONDITION_FIX.md)** - Frontend race condition fix ⭐ NEW
 - [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md#troubleshooting) - Auth issues
 - [03-QUICK_TEST.md](changedoc/03-QUICK_TEST.md#troubleshooting) - Common problems
 - [01-TESTING.md](changedoc/01-TESTING.md#troubleshooting) - Testing issues
