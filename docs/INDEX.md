@@ -5,6 +5,7 @@
 ### Getting Started
 - **[Main README](../README.md)** - Project overview and quick start
 - **[QUICKSTART](QUICKSTART.md)** - Step-by-step getting started guide
+- **[SSL Quick Start](SSL_QUICK_START.md)** - HTTPS setup for localhost and production ⭐ NEW
 - **[Authentication Implementation](AUTHENTICATION_IMPLEMENTATION.md)** - Frontend/Backend auth setup + Stateless vs Stateful ⭐ NEW
 - **[API Authentication Guide](API_AUTHENTICATION_GUIDE.md)** - Complete curl examples with authentication
 - **[API Examples](API_EXAMPLES.md)** - API endpoint examples and usage
@@ -26,7 +27,9 @@ All implementation docs are in `changedoc/` with sequence numbers:
 8. **[08-UI_REWORK_MODERN_DASHBOARD.md](changedoc/08-UI_REWORK_MODERN_DASHBOARD.md)** - Modern dashboard UI implementation
 9. **[09-PHASE1_COMPLETE.md](changedoc/09-PHASE1_COMPLETE.md)** - Phase 1 milestone completion
 10. **[10-PHASE2_TENANTS_COMPLETE.md](changedoc/10-PHASE2_TENANTS_COMPLETE.md)** - Phase 2 tenant features completion
-11. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - AWS deployment with Pulumi ⭐ NEW
+11. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - AWS deployment with Pulumi
+12. **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** - Optional Google OAuth integration
+13. **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** - SSL/HTTPS setup with Let's Encrypt ⭐ NEW
 
 See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
@@ -62,6 +65,7 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### Deployment
 - **[AWS Deployment Guide](AWS_DEPLOYMENT_GUIDE.md)** - Complete AWS deployment guide ⭐ NEW
+- **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** - SSL/HTTPS certificates with Let's Encrypt ⭐ NEW
 - **[Platform Compatibility](PLATFORM_COMPATIBILITY.md)** - ARM64/AMD64 multi-arch support ⭐ NEW
 - **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy setup and configuration ⭐ NEW
 - **[Custom Domains Guide](CUSTOM_DOMAINS.md)** - Custom domains and host configuration ⭐ NEW
@@ -108,24 +112,25 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### DevOps/SRE
 1. **[AWS Deployment Guide](AWS_DEPLOYMENT_GUIDE.md)** - Production deployment ⭐ NEW
-2. **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy configuration ⭐ NEW
-3. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Infrastructure as code ⭐ NEW
-4. [Infrastructure README](../infra/README.md) - Pulumi infrastructure docs
-5. [Docker Compose](../docker-compose.yml) - Local service definitions
-6. [Makefile](../Makefile) - Common commands
-7. [QUICKSTART.md](QUICKSTART.md) - Setup procedures
-8. [05-IMPLEMENTATION_COMPLETE.md](changedoc/05-IMPLEMENTATION_COMPLETE.md) - System overview
+2. **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** - SSL/HTTPS setup ⭐ NEW
+3. **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy configuration ⭐ NEW
+4. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Infrastructure as code ⭐ NEW
+5. [Infrastructure README](../infra/README.md) - Pulumi infrastructure docs
+6. [Docker Compose](../docker-compose.yml) - Local service definitions
+7. [Makefile](../Makefile) - Common commands
+8. [QUICKSTART.md](QUICKSTART.md) - Setup procedures
+9. [05-IMPLEMENTATION_COMPLETE.md](changedoc/05-IMPLEMENTATION_COMPLETE.md) - System overview
 
 ## 📊 Documentation Metrics
 
-- **Total Docs**: 21+ files (UPDATED)
-- **Change Docs**: 11 sequenced files (UPDATED)
+- **Total Docs**: 22+ files (UPDATED)
+- **Change Docs**: 13 sequenced files (UPDATED)
 - **Code Examples**: 250+ snippets (UPDATED)
 - **API Endpoints**: 40+ documented
 - **Testing Guides**: 4 comprehensive guides
-- **Implementation Guides**: 4 (Frontend/Backend auth, API usage, RBAC authorization, AWS deployment) (UPDATED)
+- **Implementation Guides**: 5 (Frontend/Backend auth, API usage, RBAC authorization, AWS deployment, SSL/HTTPS) (UPDATED)
 - **Infrastructure Code**: 15+ Pulumi modules in Go
-- **Deployment Scripts**: 5 automated scripts
+- **Deployment Scripts**: 8 automated scripts (UPDATED)
 
 ## 🔄 Documentation Maintenance
 
@@ -158,6 +163,7 @@ When making significant changes:
 |-------------|---------------|
 | Quick start project | [QUICKSTART.md](QUICKSTART.md) |
 | **Deploy to AWS** | **[AWS_DEPLOYMENT_GUIDE.md](AWS_DEPLOYMENT_GUIDE.md)** ⭐ NEW |
+| **Setup HTTPS/SSL** | **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** ⭐ NEW |
 | **Setup nginx proxy** | **[NGINX_PROXY_GUIDE.md](NGINX_PROXY_GUIDE.md)** ⭐ NEW |
 | **Infrastructure code** | **[infra/README.md](../infra/README.md)** ⭐ NEW |
 | Setup frontend auth | [AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup](AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup) |
@@ -177,6 +183,7 @@ When making significant changes:
 
 **Last Updated**: November 24, 2025  
 **Maintained By**: Development Team  
-**Status**: AWS Deployment Ready 🚀 ✅  
-**Authentication**: Email/Password + Optional Google OAuth
+**Status**: AWS Deployment Ready with HTTPS 🚀 ✅ 🔒  
+**Authentication**: Email/Password + Optional Google OAuth  
+**Security**: TLS 1.2/1.3 + Let's Encrypt + Auto-renewal
 

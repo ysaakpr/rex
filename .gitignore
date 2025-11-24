@@ -54,3 +54,4 @@ temp/
 # Documentation build artifacts (if any)
 docs/**/*.html
 docs/**/*.pdf
+/ssl/*.pem

@@ -27,6 +27,7 @@
 - **Docker**: Full containerization with Docker Compose
 - **Dev Container**: VS Code dev container support for consistent development
 - **API Design**: RESTful API with comprehensive endpoints
+- **HTTPS Support**: Self-signed certificates for localhost, Let's Encrypt for production
 
 ## 📋 Table of Contents
 
@@ -48,11 +49,11 @@
 ┌──────────────┐
 │   Browser    │
 └──────┬───────┘
-       │ http://localhost
+       │ https://localhost (HTTP/2)
        ↓
 ┌──────────────┐
-│    Nginx     │  ← Reverse Proxy
-│   Port 80    │
+│    Nginx     │  ← Reverse Proxy with SSL/TLS
+│  Ports 80,443│
 └──────┬───────┘
        │
    ┌───┴────┬──────────────┐
@@ -83,9 +84,12 @@
 
 - **Authentication**: SuperTokens with cookie-based sessions
 - **Authorization**: RBAC with roles, policies, and permissions
+- **HTTPS/TLS**: SSL certificates with automatic HTTP to HTTPS redirect
+- **Certificate Management**: Self-signed (localhost) and Let's Encrypt (production)
 - **Network Isolation**: Services communicate through internal Docker network
 - **API Gateway**: Nginx reverse proxy as single entry point
 - **Session Management**: HTTP-only cookies with anti-CSRF protection
+- **Security Headers**: HSTS, X-Frame-Options, X-Content-Type-Options
 
 ## 📦 Prerequisites
 

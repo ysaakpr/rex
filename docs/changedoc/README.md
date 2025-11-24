@@ -181,6 +181,21 @@ This folder contains documentation created during the implementation and testing
 - Troubleshooting guide
 - Non-breaking enhancement maintaining email/password auth
 
+### 20-LETSENCRYPT_SSL_SETUP.md
+**Created**: November 24, 2025  
+**Purpose**: Comprehensive SSL/TLS certificate support for localhost and production  
+**Content**:
+- Self-signed certificates for localhost development
+- Let's Encrypt certificates for production domains
+- Automatic certificate renewal via Certbot
+- HTTP to HTTPS automatic redirection
+- Modern TLS configuration (TLS 1.2/1.3)
+- Security headers (HSTS, X-Frame-Options, etc.)
+- Interactive SSL management scripts
+- Comprehensive troubleshooting guide
+- Zero-downtime certificate issuance
+- Complete nginx HTTPS configuration
+
 ## Reading Order
 
 ### For New Users
@@ -199,9 +214,10 @@ This folder contains documentation created during the implementation and testing
 1. **03-QUICK_TEST.md** - Testing procedures
 2. **01-TESTING.md** - Comprehensive testing
 3. **02-AUTH_TESTING.md** - Authentication verification
-4. **11-AWS_DEPLOYMENT.md** - AWS deployment guide
-5. **16-AMPLIFY_FRONTEND_MIGRATION.md** - Frontend deployment with Amplify
-6. **05-IMPLEMENTATION_COMPLETE.md** - Deployment status
+4. **20-LETSENCRYPT_SSL_SETUP.md** - SSL/HTTPS setup
+5. **11-AWS_DEPLOYMENT.md** - AWS deployment guide
+6. **16-AMPLIFY_FRONTEND_MIGRATION.md** - Frontend deployment with Amplify
+7. **05-IMPLEMENTATION_COMPLETE.md** - Deployment status
 
 ## Key Milestones
 
@@ -214,6 +230,7 @@ This folder contains documentation created during the implementation and testing
 7. **Amplify Migration** → Optimized frontend deployment with AWS Amplify
 8. **All-in-One Enhancement** → Automatic platform admin initialization for simplified deployment
 9. **Google OAuth Integration** → Optional social login with Google authentication
+10. **HTTPS/SSL Implementation** → Complete Let's Encrypt and self-signed certificate support
 
 ## Document Updates
 
