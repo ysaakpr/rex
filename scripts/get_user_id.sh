@@ -21,25 +21,42 @@ fi
 echo "Searching for user: $EMAIL"
 echo ""
 
-# Get database credentials
-DB_USER=${DB_USER:-utmuser}
-DB_NAME=${DB_NAME:-utm_backend}
+# SuperTokens uses its own database
+ST_DB_USER=${ST_DB_USER:-supertokens}
+ST_DB_NAME=${ST_DB_NAME:-supertokens}
 
 # Query SuperTokens database for user
-docker-compose exec -T postgres psql -U "$DB_USER" -d utm_backend <<EOF
--- Query emailpassword_users table in SuperTokens schema
+docker-compose exec -T supertokens-db psql -U "$ST_DB_USER" -d "$ST_DB_NAME" <<EOF
+-- Query emailpassword_users table in SuperTokens database
 SELECT 
     user_id,
     email,
-    time_joined as created_at,
-    CASE 
-        WHEN EXISTS(SELECT 1 FROM platform_admins WHERE platform_admins.user_id = emailpassword_users.user_id) 
-        THEN '👑 Platform Admin'
-        ELSE 'Regular User'
-    END as status
+    to_timestamp(time_joined / 1000) as created_at
 FROM emailpassword_users 
 WHERE email = '$EMAIL';
 EOF
+
+echo ""
+echo "Checking if user is a platform admin..."
+
+# Check platform admin status in main database
+DB_USER=${DB_USER:-utmuser}
+DB_NAME=${DB_NAME:-utm_backend}
+
+# Get user_id from previous query
+USER_ID=\$(docker-compose exec -T supertokens-db psql -U "$ST_DB_USER" -d "$ST_DB_NAME" -t -A -c \
+  "SELECT user_id FROM emailpassword_users WHERE email = '$EMAIL';" 2>/dev/null | head -1)
+
+if [ ! -z "\$USER_ID" ]; then
+    docker-compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" <<ADMINEOF
+SELECT 
+    CASE 
+        WHEN EXISTS(SELECT 1 FROM platform_admins WHERE user_id = '\$USER_ID') 
+        THEN '👑 Platform Admin'
+        ELSE 'Regular User'
+    END as status;
+ADMINEOF
+fi
 
 if [ $? -ne 0 ]; then
     echo ""
