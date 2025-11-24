@@ -6,6 +6,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    // Allow requests from any host (useful for custom domains, staging environments, etc.)
+    allowedHosts: 'all',
+    watch: {
+      usePolling: true,
+    },
+    hmr: {
+      // Enable HMR to work through nginx proxy
+      clientPort: 80,
+    },
     proxy: {
       // Proxy all /api requests (including /api/auth for SuperTokens) to backend
       '/api': {

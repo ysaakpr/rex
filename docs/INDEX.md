@@ -38,6 +38,7 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### Authentication & Security
 - [AUTHENTICATION_IMPLEMENTATION.md](AUTHENTICATION_IMPLEMENTATION.md) - Complete implementation guide: Frontend setup + Backend stateless vs stateful ⭐ NEW
+- **[SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md)** - SuperTokens security architecture and best practices ⭐ NEW
 - **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** - Optional Google OAuth login integration ⭐ NEW
 - **[RBAC_AUTHORIZATION_GUIDE.md](RBAC_AUTHORIZATION_GUIDE.md)** - Complete RBAC authorization guide with backend/frontend examples ⭐ NEW
 - [API_AUTHENTICATION_GUIDE.md](API_AUTHENTICATION_GUIDE.md) - Complete auth guide + Token reference (Access, Refresh, Front)
@@ -61,6 +62,8 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### Deployment
 - **[AWS Deployment Guide](AWS_DEPLOYMENT_GUIDE.md)** - Complete AWS deployment guide ⭐ NEW
+- **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy setup and configuration ⭐ NEW
+- **[Custom Domains Guide](CUSTOM_DOMAINS.md)** - Custom domains and host configuration ⭐ NEW
 - **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Pulumi infrastructure documentation ⭐ NEW
 - [Infrastructure Code](../infra/) - Pulumi Go infrastructure
 - [Docker Compose](../docker-compose.yml) - Local development orchestration
@@ -104,12 +107,13 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### DevOps/SRE
 1. **[AWS Deployment Guide](AWS_DEPLOYMENT_GUIDE.md)** - Production deployment ⭐ NEW
-2. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Infrastructure as code ⭐ NEW
-3. [Infrastructure README](../infra/README.md) - Pulumi infrastructure docs
-4. [Docker Compose](../docker-compose.yml) - Local service definitions
-5. [Makefile](../Makefile) - Common commands
-6. [QUICKSTART.md](QUICKSTART.md) - Setup procedures
-7. [05-IMPLEMENTATION_COMPLETE.md](changedoc/05-IMPLEMENTATION_COMPLETE.md) - System overview
+2. **[Nginx Proxy Guide](NGINX_PROXY_GUIDE.md)** - Reverse proxy configuration ⭐ NEW
+3. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - Infrastructure as code ⭐ NEW
+4. [Infrastructure README](../infra/README.md) - Pulumi infrastructure docs
+5. [Docker Compose](../docker-compose.yml) - Local service definitions
+6. [Makefile](../Makefile) - Common commands
+7. [QUICKSTART.md](QUICKSTART.md) - Setup procedures
+8. [05-IMPLEMENTATION_COMPLETE.md](changedoc/05-IMPLEMENTATION_COMPLETE.md) - System overview
 
 ## 📊 Documentation Metrics
 
@@ -153,6 +157,7 @@ When making significant changes:
 |-------------|---------------|
 | Quick start project | [QUICKSTART.md](QUICKSTART.md) |
 | **Deploy to AWS** | **[AWS_DEPLOYMENT_GUIDE.md](AWS_DEPLOYMENT_GUIDE.md)** ⭐ NEW |
+| **Setup nginx proxy** | **[NGINX_PROXY_GUIDE.md](NGINX_PROXY_GUIDE.md)** ⭐ NEW |
 | **Infrastructure code** | **[infra/README.md](../infra/README.md)** ⭐ NEW |
 | Setup frontend auth | [AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup](AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup) |
 | **Add Google login** | **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** ⭐ NEW |

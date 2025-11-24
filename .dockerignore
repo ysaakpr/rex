@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+*.md
+docs/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+dist/
+build/
+
+# Dependencies (will be installed in container)
+node_modules/
+vendor/
+
+# Test files
+*_test.go
+test/
+coverage/
+
+# Temporary files
+tmp/
+temp/
+

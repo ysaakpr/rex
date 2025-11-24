@@ -144,9 +144,13 @@ make migrate-up
 
 ### 5. Access Services
 
-- **API**: http://localhost:8080
+- **Main Application: http://localhost** ⭐ (via Nginx reverse proxy)
+  - Frontend: `http://localhost/`
+  - API: `http://localhost/api`
+  - Auth: `http://localhost/auth`
 - **MailHog (Email Testing)**: http://localhost:8025
-- **SuperTokens Dashboard**: http://localhost:3567
+
+**Note**: All services are now accessible through Nginx on port 80. See [Nginx Proxy Guide](docs/NGINX_PROXY_GUIDE.md) for routing details.
 
 ## 📁 Project Structure
 
