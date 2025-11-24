@@ -224,7 +224,9 @@ utm-backend/
 | POST | `/api/v1/roles/:id/permissions` | Assign permissions to role |
 | GET | `/api/v1/permissions` | List permissions |
 | POST | `/api/v1/permissions` | Create permission |
-| POST | `/api/v1/authorize` | Check user permission |
+| POST | `/api/v1/authorize` | Check user permission ⭐ |
+
+**📖 For detailed RBAC implementation guide (backend & frontend examples), see [RBAC Authorization Guide](docs/RBAC_AUTHORIZATION_GUIDE.md)**
 
 ## 🗄 Database Schema
 

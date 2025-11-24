@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import SuperTokens, { SuperTokensWrapper } from "supertokens-auth-react";
 import { getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react/ui";
 import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpassword/prebuiltui";
+import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui";
 import { SessionAuth } from "supertokens-auth-react/recipe/session";
 import * as reactRouterDom from "react-router-dom";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
+import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
 import Session from "supertokens-auth-react/recipe/session";
+import { Loader2 } from 'lucide-react';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { AccessDenied } from './components/pages/AccessDenied';
 import { TenantsPage } from './components/pages/TenantsPage';
@@ -23,22 +26,50 @@ import { ApplicationsPage } from './components/pages/ApplicationsPage';
 import { AcceptInvitationPage } from './components/pages/AcceptInvitationPage';
 import './index.css';
 
-// SuperTokens configuration
-SuperTokens.init({
-  appInfo: {
-    appName: "Rex",
-    apiDomain: window.location.origin,
-    websiteDomain: window.location.origin,
-    apiBasePath: "/api/auth",  // API calls go to /api/auth (proxied to backend)
-    websiteBasePath: "/auth"   // UI pages stay at /auth (handled by React Router)
-  },
-  recipeList: [
-    EmailPassword.init(),
-    Session.init({
-      sessionExpiredStatusCode: 401,
-    })
-  ]
-});
+// Initialize SuperTokens with auth config (will be called dynamically)
+let authConfig = null;
+let superTokensInitialized = false;
+
+function initializeSuperTokens(config) {
+  if (superTokensInitialized) return;
+  
+  const recipeList = [];
+  
+  // Add ThirdParty recipe only if Google OAuth is enabled
+  if (config?.providers?.google) {
+    console.log('[SuperTokens] Google OAuth enabled - adding ThirdParty recipe');
+    recipeList.push(
+      ThirdParty.init({
+        signInAndUpFeature: {
+          providers: [
+            ThirdParty.Google.init(),
+          ],
+        },
+      })
+    );
+  } else {
+    console.log('[SuperTokens] Google OAuth disabled - skipping ThirdParty recipe');
+  }
+  
+  // Always add EmailPassword and Session
+  recipeList.push(EmailPassword.init());
+  recipeList.push(Session.init({
+    sessionExpiredStatusCode: 401,
+  }));
+  
+  SuperTokens.init({
+    appInfo: {
+      appName: "Rex",
+      apiDomain: window.location.origin,
+      websiteDomain: window.location.origin,
+      apiBasePath: "/api/auth",
+      websiteBasePath: "/auth"
+    },
+    recipeList: recipeList
+  });
+  
+  superTokensInitialized = true;
+}
 
 // Component that checks platform admin status
 function ProtectedDashboard({ children }) {
@@ -108,13 +139,18 @@ function ProtectedDashboard({ children }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
-function App() {
+function AppContent({ authConfig }) {
+  // Determine which auth UIs to show based on config
+  const authUIs = authConfig?.providers?.google 
+    ? [ThirdPartyPreBuiltUI, EmailPasswordPreBuiltUI]
+    : [EmailPasswordPreBuiltUI];
+  
   return (
     <SuperTokensWrapper>
       <BrowserRouter>
         <Routes>
           {/* SuperTokens auth routes */}
-          {getSuperTokensRoutesForReactRouterDom(reactRouterDom, [EmailPasswordPreBuiltUI])}
+          {getSuperTokensRoutesForReactRouterDom(reactRouterDom, authUIs)}
           
           {/* Public invitation routes - accessible before authentication */}
           <Route
@@ -257,6 +293,79 @@ function App() {
       </BrowserRouter>
     </SuperTokensWrapper>
   );
+}
+
+// Main App component that fetches auth config before initializing SuperTokens
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchAuthConfig() {
+      try {
+        console.log('[App] Fetching auth configuration...');
+        const response = await fetch('/api/v1/auth/config');
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch auth config: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        const authConfig = result.data;
+        
+        console.log('[App] Auth configuration received:', authConfig);
+        setConfig(authConfig);
+        
+        // Initialize SuperTokens with the fetched config
+        initializeSuperTokens(authConfig);
+        
+      } catch (err) {
+        console.error('[App] Error fetching auth config:', err);
+        setError(err.message);
+        
+        // Fallback: Initialize SuperTokens without Google OAuth
+        console.log('[App] Falling back to email/password only');
+        initializeSuperTokens({ providers: { google: false } });
+        setConfig({ providers: { google: false } });
+        
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchAuthConfig();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !config) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center max-w-md p-6 border rounded-lg bg-card">
+          <h2 className="text-xl font-semibold text-destructive mb-2">Configuration Error</h2>
+          <p className="text-sm text-muted-foreground mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <AppContent authConfig={config} />;
 }
 
 export default App;

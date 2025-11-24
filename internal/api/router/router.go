@@ -18,6 +18,7 @@ type RouterDeps struct {
 	PlatformAdminHandler *handlers.PlatformAdminHandler
 	UserHandler          *handlers.UserHandler
 	SystemUserHandler    *handlers.SystemUserHandler
+	AuthConfigHandler    *handlers.AuthConfigHandler
 	MemberRepo           repository.MemberRepository
 	RBACService          services.RBACService
 	Logger               *zap.Logger
@@ -45,6 +46,9 @@ func SetupRouter(deps *RouterDeps) *gin.Engine {
 	{
 		// Public routes - invitation details can be viewed before authentication
 		v1.GET("/invitations/:token", deps.InvitationHandler.GetInvitationByToken)
+		
+		// Auth configuration endpoint - returns which OAuth providers are enabled
+		v1.GET("/auth/config", deps.AuthConfigHandler.GetAuthConfig)
 
 		// Protected routes (require authentication)
 		auth := v1.Group("")

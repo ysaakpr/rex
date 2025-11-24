@@ -38,11 +38,13 @@ type DatabaseConfig struct {
 }
 
 type SuperTokensConfig struct {
-	ConnectionURI string
-	APIKey        string
-	APIDomain     string
-	WebsiteDomain string
-	APIBasePath   string
+	ConnectionURI      string
+	APIKey             string
+	APIDomain          string
+	WebsiteDomain      string
+	APIBasePath        string
+	GoogleClientID     string
+	GoogleClientSecret string
 }
 
 type RedisConfig struct {
@@ -106,11 +108,13 @@ func Load() (*Config, error) {
 			SSLMode:  viper.GetString("db.sslmode"),
 		},
 		SuperTokens: SuperTokensConfig{
-			ConnectionURI: viper.GetString("supertokens.connection_uri"),
-			APIKey:        viper.GetString("supertokens.api_key"),
-			APIDomain:     viper.GetString("supertokens.api_domain"),
-			WebsiteDomain: viper.GetString("supertokens.website_domain"),
-			APIBasePath:   viper.GetString("supertokens.api_base_path"),
+			ConnectionURI:      viper.GetString("supertokens.connection_uri"),
+			APIKey:             viper.GetString("supertokens.api_key"),
+			APIDomain:          viper.GetString("supertokens.api_domain"),
+			WebsiteDomain:      viper.GetString("supertokens.website_domain"),
+			APIBasePath:        viper.GetString("supertokens.api_base_path"),
+			GoogleClientID:     viper.GetString("supertokens.google_client_id"),
+			GoogleClientSecret: viper.GetString("supertokens.google_client_secret"),
 		},
 		Redis: RedisConfig{
 			Host:     viper.GetString("redis.host"),
@@ -162,6 +166,8 @@ func setDefaults() {
 	viper.SetDefault("supertokens.api_domain", "http://localhost:8080")
 	viper.SetDefault("supertokens.website_domain", "http://localhost:3000")
 	viper.SetDefault("supertokens.api_base_path", "/api/auth")
+	viper.SetDefault("supertokens.google_client_id", "")
+	viper.SetDefault("supertokens.google_client_secret", "")
 
 	viper.SetDefault("redis.host", "localhost")
 	viper.SetDefault("redis.port", "6379")
@@ -200,6 +206,8 @@ func setDefaults() {
 	viper.BindEnv("supertokens.api_domain", "API_DOMAIN")
 	viper.BindEnv("supertokens.website_domain", "WEBSITE_DOMAIN")
 	viper.BindEnv("supertokens.api_base_path", "API_BASE_PATH")
+	viper.BindEnv("supertokens.google_client_id", "GOOGLE_CLIENT_ID")
+	viper.BindEnv("supertokens.google_client_secret", "GOOGLE_CLIENT_SECRET")
 	viper.BindEnv("redis.host", "REDIS_HOST")
 	viper.BindEnv("redis.port", "REDIS_PORT")
 	viper.BindEnv("redis.password", "REDIS_PASSWORD")
@@ -275,4 +283,8 @@ func IsDevelopment() bool {
 
 func IsProduction() bool {
 	return os.Getenv("APP_ENV") == "production"
+}
+
+func (c *Config) IsGoogleOAuthEnabled() bool {
+	return c.SuperTokens.GoogleClientID != "" && c.SuperTokens.GoogleClientSecret != ""
 }

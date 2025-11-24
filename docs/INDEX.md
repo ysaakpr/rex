@@ -38,6 +38,8 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ### Authentication & Security
 - [AUTHENTICATION_IMPLEMENTATION.md](AUTHENTICATION_IMPLEMENTATION.md) - Complete implementation guide: Frontend setup + Backend stateless vs stateful ⭐ NEW
+- **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** - Optional Google OAuth login integration ⭐ NEW
+- **[RBAC_AUTHORIZATION_GUIDE.md](RBAC_AUTHORIZATION_GUIDE.md)** - Complete RBAC authorization guide with backend/frontend examples ⭐ NEW
 - [API_AUTHENTICATION_GUIDE.md](API_AUTHENTICATION_GUIDE.md) - Complete auth guide + Token reference (Access, Refresh, Front)
 - [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) - Cookie and header-based auth
 - [Main README](../README.md#authentication) - Authentication overview
@@ -83,14 +85,16 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 ### Frontend Developers
 1. [04-FRONTEND_DEMO.md](changedoc/04-FRONTEND_DEMO.md) - UI overview
 2. [Frontend README](../frontend/README.md) - Setup and dev workflow
-3. [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) - Auth integration
-4. [API_EXAMPLES.md](API_EXAMPLES.md) - Backend API reference
+3. [RBAC_AUTHORIZATION_GUIDE.md](RBAC_AUTHORIZATION_GUIDE.md) - Permission checks in React ⭐ NEW
+4. [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) - Auth integration
+5. [API_EXAMPLES.md](API_EXAMPLES.md) - Backend API reference
 
 ### Backend Developers
 1. [Main README](../README.md) - Architecture
 2. [API_EXAMPLES.md](API_EXAMPLES.md) - API patterns
-3. [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) - Auth implementation
-4. [QUICKSTART.md](QUICKSTART.md) - Database migrations
+3. [RBAC_AUTHORIZATION_GUIDE.md](RBAC_AUTHORIZATION_GUIDE.md) - Authorization implementation ⭐ NEW
+4. [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) - Auth implementation
+5. [QUICKSTART.md](QUICKSTART.md) - Database migrations
 
 ### QA/Testers
 1. [03-QUICK_TEST.md](changedoc/03-QUICK_TEST.md) - Quick verification
@@ -109,14 +113,14 @@ See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 
 ## 📊 Documentation Metrics
 
-- **Total Docs**: 20+ files (UPDATED)
+- **Total Docs**: 21+ files (UPDATED)
 - **Change Docs**: 11 sequenced files (UPDATED)
-- **Code Examples**: 200+ snippets (UPDATED)
+- **Code Examples**: 250+ snippets (UPDATED)
 - **API Endpoints**: 40+ documented
 - **Testing Guides**: 4 comprehensive guides
-- **Implementation Guides**: 3 (Frontend/Backend auth, API usage, AWS deployment) (UPDATED)
-- **Infrastructure Code**: 15+ Pulumi modules in Go (NEW)
-- **Deployment Scripts**: 5 automated scripts (NEW)
+- **Implementation Guides**: 4 (Frontend/Backend auth, API usage, RBAC authorization, AWS deployment) (UPDATED)
+- **Infrastructure Code**: 15+ Pulumi modules in Go
+- **Deployment Scripts**: 5 automated scripts
 
 ## 🔄 Documentation Maintenance
 
@@ -151,9 +155,11 @@ When making significant changes:
 | **Deploy to AWS** | **[AWS_DEPLOYMENT_GUIDE.md](AWS_DEPLOYMENT_GUIDE.md)** ⭐ NEW |
 | **Infrastructure code** | **[infra/README.md](../infra/README.md)** ⭐ NEW |
 | Setup frontend auth | [AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup](AUTHENTICATION_IMPLEMENTATION.md#part-1-frontend-authentication-setup) |
+| **Add Google login** | **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** ⭐ NEW |
 | Stateless vs Stateful | [AUTHENTICATION_IMPLEMENTATION.md#part-2-backend-token-verification](AUTHENTICATION_IMPLEMENTATION.md#part-2-backend-token-verification) |
 | Test with curl | [API_AUTHENTICATION_GUIDE.md](API_AUTHENTICATION_GUIDE.md) |
 | Understand tokens | [API_AUTHENTICATION_GUIDE.md#understanding-supertokens-tokens](API_AUTHENTICATION_GUIDE.md#understanding-supertokens-tokens) |
+| **Check permissions** | **[RBAC_AUTHORIZATION_GUIDE.md](RBAC_AUTHORIZATION_GUIDE.md)** ⭐ NEW |
 | Test the system | [03-QUICK_TEST.md](changedoc/03-QUICK_TEST.md) |
 | Use the API | [API_EXAMPLES.md](API_EXAMPLES.md) |
 | Understand auth | [02-AUTH_TESTING.md](changedoc/02-AUTH_TESTING.md) |
@@ -163,7 +169,8 @@ When making significant changes:
 
 ---
 
-**Last Updated**: November 23, 2025  
+**Last Updated**: November 24, 2025  
 **Maintained By**: Development Team  
-**Status**: AWS Deployment Ready 🚀 ✅
+**Status**: AWS Deployment Ready 🚀 ✅  
+**Authentication**: Email/Password + Optional Google OAuth
 

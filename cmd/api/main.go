@@ -13,6 +13,8 @@ import (
 	"github.com/supertokens/supertokens-golang/recipe/emailpassword"
 	"github.com/supertokens/supertokens-golang/recipe/session"
 	"github.com/supertokens/supertokens-golang/recipe/session/sessmodels"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty"
+	"github.com/supertokens/supertokens-golang/recipe/thirdparty/tpmodels"
 	"github.com/supertokens/supertokens-golang/recipe/usermetadata"
 	"github.com/supertokens/supertokens-golang/supertokens"
 	"github.com/ysaakpr/rex/internal/api/handlers"
@@ -89,6 +91,7 @@ func main() {
 	platformAdminHandler := handlers.NewPlatformAdminHandler(platformAdminService)
 	userHandler := handlers.NewUserHandler(logger, db)
 	systemUserHandler := handlers.NewSystemUserHandler(systemUserService, logger)
+	authConfigHandler := handlers.NewAuthConfigHandler(cfg)
 
 	// Setup router
 	routerDeps := &router.RouterDeps{
@@ -99,6 +102,7 @@ func main() {
 		PlatformAdminHandler: platformAdminHandler,
 		UserHandler:          userHandler,
 		SystemUserHandler:    systemUserHandler,
+		AuthConfigHandler:    authConfigHandler,
 		MemberRepo:           memberRepo,
 		RBACService:          rbacService,
 		Logger:               logger,
@@ -161,6 +165,91 @@ func initSuperTokens(cfg *config.Config) error {
 	apiBasePath := cfg.SuperTokens.APIBasePath
 	websiteBasePath := "/auth"
 
+	// Build recipe list dynamically based on configuration
+	recipeList := []supertokens.Recipe{
+		emailpassword.Init(nil),
+		usermetadata.Init(nil), // For storing system user metadata
+	}
+
+	// Add Google OAuth if enabled
+	if cfg.IsGoogleOAuthEnabled() {
+		log.Printf("Google OAuth enabled with client ID: %s", cfg.SuperTokens.GoogleClientID)
+		recipeList = append(recipeList, thirdparty.Init(&tpmodels.TypeInput{
+			SignInAndUpFeature: tpmodels.TypeInputSignInAndUp{
+				Providers: []tpmodels.ProviderInput{
+					{
+						Config: tpmodels.ProviderConfig{
+							ThirdPartyId: "google",
+							Clients: []tpmodels.ProviderClientConfig{
+								{
+									ClientID:     cfg.SuperTokens.GoogleClientID,
+									ClientSecret: cfg.SuperTokens.GoogleClientSecret,
+								},
+							},
+						},
+					},
+				},
+			},
+		}))
+	} else {
+		log.Println("Google OAuth disabled - no credentials provided")
+	}
+
+	// Add session recipe
+	recipeList = append(recipeList, session.Init(&sessmodels.TypeInput{
+		CookieSecure:   ptrBool(false),   // Disable secure cookies for local development
+		CookieSameSite: ptrString("lax"), // Allow cross-origin requests with lax policy
+		// Don't set CookieDomain - let it default to the request domain
+		// This allows cookies to work properly with the frontend proxy
+
+		// Support both cookie and header-based authentication
+		GetTokenTransferMethod: func(req *http.Request, forCreateNewSession bool, userContext supertokens.UserContext) sessmodels.TokenTransferMethod {
+			// Check if client requested header-based auth
+			authMode := req.Header.Get("st-auth-mode")
+			if authMode == "header" {
+				return sessmodels.HeaderTransferMethod
+			}
+			// Default to cookie-based auth
+			return sessmodels.CookieTransferMethod
+		},
+
+		// Override session creation to add metadata and customize expiry
+		Override: &sessmodels.OverrideStruct{
+			Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
+				originalCreateNewSession := *originalImplementation.CreateNewSession
+
+				*originalImplementation.CreateNewSession = func(
+					userID string,
+					accessTokenPayload map[string]interface{},
+					sessionDataInDatabase map[string]interface{},
+					disableAntiCsrf *bool,
+					tenantId string,
+					userContext supertokens.UserContext,
+				) (sessmodels.SessionContainer, error) {
+					// Fetch user metadata from SuperTokens
+					metadata, err := usermetadata.GetUserMetadata(userID)
+					if err == nil && metadata != nil {
+						// Check if this is a system user
+						if isSystemUser, ok := metadata["is_system_user"].(bool); ok && isSystemUser {
+							// Add system user flags to token payload
+							accessTokenPayload["is_system_user"] = true
+							if serviceName, ok := metadata["service_name"].(string); ok {
+								accessTokenPayload["service_name"] = serviceName
+							}
+							if serviceType, ok := metadata["service_type"].(string); ok {
+								accessTokenPayload["service_type"] = serviceType
+							}
+						}
+					}
+
+					return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
+				}
+
+				return originalImplementation
+			},
+		},
+	}))
+
 	err := supertokens.Init(supertokens.TypeInput{
 		Supertokens: &supertokens.ConnectionInfo{
 			ConnectionURI: cfg.SuperTokens.ConnectionURI,
@@ -173,63 +262,7 @@ func initSuperTokens(cfg *config.Config) error {
 			APIBasePath:     &apiBasePath,
 			WebsiteBasePath: &websiteBasePath,
 		},
-		RecipeList: []supertokens.Recipe{
-			emailpassword.Init(nil),
-			usermetadata.Init(nil), // For storing system user metadata
-			session.Init(&sessmodels.TypeInput{
-				CookieSecure:   ptrBool(false),   // Disable secure cookies for local development
-				CookieSameSite: ptrString("lax"), // Allow cross-origin requests with lax policy
-				// Don't set CookieDomain - let it default to the request domain
-				// This allows cookies to work properly with the frontend proxy
-
-				// Support both cookie and header-based authentication
-				GetTokenTransferMethod: func(req *http.Request, forCreateNewSession bool, userContext supertokens.UserContext) sessmodels.TokenTransferMethod {
-					// Check if client requested header-based auth
-					authMode := req.Header.Get("st-auth-mode")
-					if authMode == "header" {
-						return sessmodels.HeaderTransferMethod
-					}
-					// Default to cookie-based auth
-					return sessmodels.CookieTransferMethod
-				},
-
-				// Override session creation to add metadata and customize expiry
-				Override: &sessmodels.OverrideStruct{
-					Functions: func(originalImplementation sessmodels.RecipeInterface) sessmodels.RecipeInterface {
-						originalCreateNewSession := *originalImplementation.CreateNewSession
-
-						*originalImplementation.CreateNewSession = func(
-							userID string,
-							accessTokenPayload map[string]interface{},
-							sessionDataInDatabase map[string]interface{},
-							disableAntiCsrf *bool,
-							tenantId string,
-							userContext supertokens.UserContext,
-						) (sessmodels.SessionContainer, error) {
-							// Fetch user metadata from SuperTokens
-							metadata, err := usermetadata.GetUserMetadata(userID)
-							if err == nil && metadata != nil {
-								// Check if this is a system user
-								if isSystemUser, ok := metadata["is_system_user"].(bool); ok && isSystemUser {
-									// Add system user flags to token payload
-									accessTokenPayload["is_system_user"] = true
-									if serviceName, ok := metadata["service_name"].(string); ok {
-										accessTokenPayload["service_name"] = serviceName
-									}
-									if serviceType, ok := metadata["service_type"].(string); ok {
-										accessTokenPayload["service_type"] = serviceType
-									}
-								}
-							}
-
-							return originalCreateNewSession(userID, accessTokenPayload, sessionDataInDatabase, disableAntiCsrf, tenantId, userContext)
-						}
-
-						return originalImplementation
-					},
-				},
-			}),
-		},
+		RecipeList: recipeList,
 	})
 
 	return err
