@@ -44,14 +44,14 @@ DB_USER=${DB_USER:-utmuser}
 DB_NAME=${DB_NAME:-utm_backend}
 
 # Get user_id from previous query
-USER_ID=\$(docker-compose exec -T supertokens-db psql -U "$ST_DB_USER" -d "$ST_DB_NAME" -t -A -c \
-  "SELECT user_id FROM emailpassword_users WHERE email = '$EMAIL';" 2>/dev/null | head -1)
+USER_ID=$(docker-compose exec -T supertokens-db psql -U "$ST_DB_USER" -d "$ST_DB_NAME" -t -A -c \
+  "SELECT user_id FROM emailpassword_users WHERE email = '$EMAIL';" 2>/dev/null | head -1 | tr -d '[:space:]')
 
-if [ ! -z "\$USER_ID" ]; then
+if [ ! -z "$USER_ID" ]; then
     docker-compose exec -T postgres psql -U "$DB_USER" -d "$DB_NAME" <<ADMINEOF
 SELECT 
     CASE 
-        WHEN EXISTS(SELECT 1 FROM platform_admins WHERE user_id = '\$USER_ID') 
+        WHEN EXISTS(SELECT 1 FROM platform_admins WHERE user_id = '$USER_ID') 
         THEN '👑 Platform Admin'
         ELSE 'Regular User'
     END as status;
