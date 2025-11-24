@@ -26,18 +26,11 @@ echo ""
 echo "Step 1: Creating ssl directory..."
 mkdir -p ./ssl
 
-echo "Step 2: Generating temporary self-signed certificate..."
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout ./ssl/key.pem \
-    -out ./ssl/cert.pem \
-    -subj "/C=US/ST=State/L=City/O=Organization/CN=$(hostname -f 2>/dev/null || echo localhost)" \
-    2>/dev/null
+echo "Step 2: Pulling latest docker-compose configuration..."
+docker-compose pull nginx
 
-chmod 644 ./ssl/cert.pem
-chmod 600 ./ssl/key.pem
-
-echo "Step 3: Restarting nginx..."
-docker-compose restart nginx
+echo "Step 3: Restarting nginx (will auto-generate certificates)..."
+docker-compose up -d nginx
 
 echo ""
 echo "Waiting for nginx to start..."
