@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Home, LogOut, User, Mail } from 'lucide-react';
+import { ShieldAlert, Home, LogOut, User, Mail, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from "supertokens-auth-react/recipe/emailpassword";
 import Session from 'supertokens-auth-react/recipe/session';
@@ -10,6 +10,7 @@ export function AccessDenied() {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [copiedField, setCopiedField] = useState(null);
 
   useEffect(() => {
     loadUserInfo();
@@ -46,6 +47,17 @@ export function AccessDenied() {
   const handleSignOut = async () => {
     await signOut();
     window.location.href = '/auth';
+  };
+
+  const handleCopy = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   return (
@@ -89,21 +101,49 @@ export function AccessDenied() {
               <p className="text-muted-foreground text-center py-2">Loading user info...</p>
             ) : (
               <div className="space-y-3">
+                {/* Email Field with Copy */}
                 <div className="flex items-start gap-2">
                   <Mail className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-mono text-sm break-all">{userInfo?.email}</p>
+                    <div className="flex items-start gap-2">
+                      <p className="font-mono text-sm break-all flex-1">{userInfo?.email}</p>
+                      <button
+                        onClick={() => handleCopy(userInfo?.email, 'email')}
+                        className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+                        title="Copy email"
+                      >
+                        {copiedField === 'email' ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
                 
+                {/* User ID Field with Copy */}
                 <div className="flex items-start gap-2">
                   <User className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0 text-left">
                     <p className="text-xs text-muted-foreground">User ID</p>
-                    <p className="font-mono text-xs break-all text-muted-foreground">
-                      {userInfo?.userId}
-                    </p>
+                    <div className="flex items-start gap-2">
+                      <p className="font-mono text-xs break-all text-muted-foreground flex-1">
+                        {userInfo?.userId}
+                      </p>
+                      <button
+                        onClick={() => handleCopy(userInfo?.userId, 'userId')}
+                        className="p-1 hover:bg-muted rounded transition-colors flex-shrink-0"
+                        title="Copy user ID"
+                      >
+                        {copiedField === 'userId' ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
