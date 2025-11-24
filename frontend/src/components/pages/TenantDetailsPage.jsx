@@ -31,18 +31,26 @@ export function TenantDetailsPage() {
 
   const checkPlatformAdmin = async () => {
     try {
+      console.log('[TenantDetailsPage] Checking platform admin status...');
+      
       const response = await fetch('/api/v1/platform/admins/check', {
         credentials: 'include'
       });
       
       if (response.ok) {
         const data = await response.json();
-        setIsPlatformAdmin(data.data?.is_platform_admin || false);
+        const isAdmin = data.data?.is_platform_admin || false;
+        console.log('[TenantDetailsPage] Platform admin check result:', {
+          isAdmin,
+          responseData: data
+        });
+        setIsPlatformAdmin(isAdmin);
       } else {
+        console.log('[TenantDetailsPage] Platform admin check failed:', response.status);
         setIsPlatformAdmin(false);
       }
     } catch (err) {
-      console.error('Error checking platform admin status:', err);
+      console.error('[TenantDetailsPage] Error checking platform admin status:', err);
       setIsPlatformAdmin(false);
     }
   };
@@ -56,6 +64,12 @@ export function TenantDetailsPage() {
       const endpoint = isPlatformAdmin 
         ? `/api/v1/platform/tenants/${id}`
         : `/api/v1/tenants/${id}`;
+      
+      console.log('[TenantDetailsPage] Loading tenant details:', {
+        tenantId: id,
+        isPlatformAdmin,
+        endpoint
+      });
       
       const response = await fetch(endpoint, {
         credentials: 'include'
