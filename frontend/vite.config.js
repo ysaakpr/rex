@@ -1,8 +1,19 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  const env = loadEnv(mode, process.cwd(), '')
+  
+  // Get base path from environment or default to '/'
+  const basePath = env.VITE_BASE_PATH || '/'
+  
+  // Ensure base path has trailing slash for Vite
+  const base = basePath.endsWith('/') ? basePath : `${basePath}/`
+  
+  return {
   plugins: [react()],
+    base,
   server: {
     host: '0.0.0.0',
     port: 3000,
@@ -14,6 +25,7 @@ export default defineConfig({
     hmr: {
       // Enable HMR to work through nginx proxy
       clientPort: 80,
+        path: `${base}@vite/client`,
     },
     proxy: {
       // Proxy all /api requests (including /api/auth for SuperTokens) to backend
@@ -39,8 +51,8 @@ export default defineConfig({
             console.log('Received Response:', proxyRes.statusCode, req.url);
           });
         },
+        }
       }
     }
   }
 })
-

@@ -13,6 +13,7 @@ services:
       - certbot_conf:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
     depends_on:
+      - docs
       - frontend
       - api
     networks:
@@ -171,7 +172,28 @@ services:
     networks:
       - utm-network
 
-  # Frontend - React app
+  # Documentation - VitePress site
+  docs:
+    build:
+      context: ./docs-website
+      dockerfile: Dockerfile
+      target: development
+      args:
+        VITE_DEMO_URL: http://localhost/demo
+    container_name: utm-docs
+    volumes:
+      - ./docs-website:/app
+      - docs_node_modules:/app/node_modules
+    expose:
+      - "5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_DEMO_URL=http://localhost/demo
+    networks:
+      - utm-network
+    restart: unless-stopped
+
+  # Frontend - React app (Admin Demo)
   frontend:
     build:
       context: ./frontend
@@ -197,6 +219,7 @@ volumes:
   go_cache:
   certbot_conf:
   certbot_www:
+  docs_node_modules:
 
 networks:
   utm-network:

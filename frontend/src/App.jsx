@@ -25,18 +25,26 @@ import { UserDetailsPage } from './components/pages/UserDetailsPage';
 import { ApplicationsPage } from './components/pages/ApplicationsPage';
 import { AcceptInvitationPage } from './components/pages/AcceptInvitationPage';
 import './index.css';
+import appConfig from './config';
 
 // Initialize SuperTokens with auth config (will be called dynamically)
 let authConfig = null;
 let superTokensInitialized = false;
 
-function initializeSuperTokens(config) {
+function initializeSuperTokens(authProviderConfig) {
   if (superTokensInitialized) return;
+  
+  console.log('[SuperTokens] Initializing with config:', {
+    apiDomain: appConfig.apiDomain,
+    websiteDomain: appConfig.websiteDomain,
+    authPath: appConfig.authPath,
+    apiBasePath: appConfig.apiBasePath,
+  });
   
   const recipeList = [];
   
   // Add ThirdParty recipe only if Google OAuth is enabled
-  if (config?.providers?.google) {
+  if (authProviderConfig?.providers?.google) {
     console.log('[SuperTokens] Google OAuth enabled - adding ThirdParty recipe');
     recipeList.push(
       ThirdParty.init({
@@ -59,11 +67,11 @@ function initializeSuperTokens(config) {
   
   SuperTokens.init({
     appInfo: {
-      appName: "Rex",
-      apiDomain: window.location.origin,
-      websiteDomain: window.location.origin,
-      apiBasePath: "/api/auth",
-      websiteBasePath: "/auth"
+      appName: appConfig.appName,
+      apiDomain: appConfig.apiDomain || window.location.origin,
+      websiteDomain: appConfig.websiteDomain || window.location.origin,
+      apiBasePath: appConfig.apiBasePath,
+      websiteBasePath: appConfig.authPath
     },
     recipeList: recipeList
   });
@@ -147,7 +155,7 @@ function AppContent({ authConfig }) {
   
   return (
     <SuperTokensWrapper>
-      <BrowserRouter>
+      <BrowserRouter basename={appConfig.basename}>
         <Routes>
           {/* SuperTokens auth routes */}
           {getSuperTokensRoutesForReactRouterDom(reactRouterDom, authUIs)}

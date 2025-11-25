@@ -196,6 +196,21 @@ This folder contains documentation created during the implementation and testing
 - Zero-downtime certificate issuance
 - Complete nginx HTTPS configuration
 
+### 21-DOCS_WEBSITE_NGINX_RECONFIGURATION.md
+**Created**: November 25, 2025  
+**Purpose**: Documentation website deployment and nginx reconfiguration  
+**Content**:
+- VitePress documentation website setup
+- Nginx reconfiguration to serve docs at root URL
+- Admin dashboard moved to /demo path
+- Updated environment variables and configuration
+- Frontend routing updates for new base path
+- SuperTokens configuration adjustments
+- Complete testing checklist
+- Migration guide for existing deployments
+- Breaking changes documentation
+- Production deployment considerations
+
 ## Reading Order
 
 ### For New Users
@@ -231,6 +246,7 @@ This folder contains documentation created during the implementation and testing
 8. **All-in-One Enhancement** → Automatic platform admin initialization for simplified deployment
 9. **Google OAuth Integration** → Optional social login with Google authentication
 10. **HTTPS/SSL Implementation** → Complete Let's Encrypt and self-signed certificate support
+11. **Documentation Website** → VitePress docs at root, admin dashboard at /demo
 
 ## Document Updates
 
@@ -290,8 +306,9 @@ For current production documentation, refer to the main `README.md` and `docs/` 
 
 ---
 
-**Last Updated**: November 24, 2025  
+**Last Updated**: November 25, 2025  
 **Status**: Production Ready - Fully Managed Infrastructure ✅ 🚀  
 **Architecture**: Backend (ECS Fargate) + Frontend (AWS Amplify) + Databases (Aurora Serverless + ElastiCache)  
+**Documentation**: VitePress at root (/) + Admin Demo at (/demo)  
 **Authentication**: Email/Password + Optional Google OAuth
 

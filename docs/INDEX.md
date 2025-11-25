@@ -5,8 +5,9 @@
 ### Getting Started
 - **[Main README](../README.md)** - Project overview and quick start
 - **[QUICKSTART](QUICKSTART.md)** - Step-by-step getting started guide
-- **[SSL Quick Start](SSL_QUICK_START.md)** - HTTPS setup for localhost and production ⭐ NEW
-- **[Authentication Implementation](AUTHENTICATION_IMPLEMENTATION.md)** - Frontend/Backend auth setup + Stateless vs Stateful ⭐ NEW
+- **[Documentation Website Setup](DOCS_WEBSITE_SETUP.md)** - VitePress docs at root, admin at /demo ⭐ NEW
+- **[SSL Quick Start](SSL_QUICK_START.md)** - HTTPS setup for localhost and production
+- **[Authentication Implementation](AUTHENTICATION_IMPLEMENTATION.md)** - Frontend/Backend auth setup + Stateless vs Stateful
 - **[API Authentication Guide](API_AUTHENTICATION_GUIDE.md)** - Complete curl examples with authentication
 - **[API Examples](API_EXAMPLES.md)** - API endpoint examples and usage
 
@@ -30,7 +31,8 @@ All implementation docs are in `changedoc/` with sequence numbers:
 10. **[10-PHASE2_TENANTS_COMPLETE.md](changedoc/10-PHASE2_TENANTS_COMPLETE.md)** - Phase 2 tenant features completion
 11. **[11-AWS_DEPLOYMENT.md](changedoc/11-AWS_DEPLOYMENT.md)** - AWS deployment with Pulumi
 12. **[19-GOOGLE_OAUTH.md](changedoc/19-GOOGLE_OAUTH.md)** - Optional Google OAuth integration
-13. **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** - SSL/HTTPS setup with Let's Encrypt ⭐ NEW
+13. **[20-LETSENCRYPT_SSL_SETUP.md](changedoc/20-LETSENCRYPT_SSL_SETUP.md)** - SSL/HTTPS setup with Let's Encrypt
+14. **[21-DOCS_WEBSITE_NGINX_RECONFIGURATION.md](changedoc/21-DOCS_WEBSITE_NGINX_RECONFIGURATION.md)** - Documentation website & nginx reconfiguration ⭐ NEW
 
 See [changedoc/README.md](changedoc/README.md) for detailed descriptions.
 

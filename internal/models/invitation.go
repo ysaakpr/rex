@@ -50,6 +50,7 @@ type InvitationResponse struct {
 	InvitedBy  string           `json:"invited_by"`
 	RoleID     uuid.UUID        `json:"role_id"`
 	Role       *RoleResponse    `json:"role,omitempty"`
+	Token      string           `json:"token,omitempty"` // Include for admin endpoints
 	Status     InvitationStatus `json:"status"`
 	AcceptedAt *time.Time       `json:"accepted_at"`
 	ExpiresAt  time.Time        `json:"expires_at"`
@@ -63,6 +64,7 @@ func (inv *UserInvitation) ToResponse() *InvitationResponse {
 		Email:      inv.Email,
 		InvitedBy:  inv.InvitedBy,
 		RoleID:     inv.RoleID,
+		Token:      inv.Token,
 		Status:     inv.Status,
 		AcceptedAt: inv.AcceptedAt,
 		ExpiresAt:  inv.ExpiresAt,

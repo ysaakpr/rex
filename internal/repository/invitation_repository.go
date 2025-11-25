@@ -71,7 +71,8 @@ func (r *invitationRepository) GetByTenantID(tenantID uuid.UUID, pagination *mod
 
 	pagination.Normalize()
 	err := query.
-		Preload("Relation").
+		Preload("Tenant").
+		Preload("Role").
 		Offset(pagination.GetOffset()).
 		Limit(pagination.PageSize).
 		Order("created_at DESC").

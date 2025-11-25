@@ -1,29 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, UserPlus, Mail, Copy, Check } from 'lucide-react';
+import { Users, Plus, Trash2, UserPlus, Mail, Copy, Check, X, Clock } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 
 export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   const [members, setMembers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [roles, setRoles] = useState([]);
   const [userDetails, setUserDetails] = useState({}); // Map of userId -> user details
   const [allUsers, setAllUsers] = useState([]); // All platform users for search
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingInvitations, setLoadingInvitations] = useState(false);
   const [searchingUsers, setSearchingUsers] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [addMemberData, setAddMemberData] = useState({ userId: '', roleId: '' });
   const [inviteData, setInviteData] = useState({ email: '', roleId: '' });
   const [copiedText, setCopiedText] = useState(''); // Track which text was copied
+  const [activeTab, setActiveTab] = useState('members');
 
   useEffect(() => {
     loadData();
   }, [tenantId]);
+
+  useEffect(() => {
+    if (activeTab === 'invitations') {
+      loadInvitations();
+    }
+  }, [activeTab, tenantId]);
 
   const loadData = async () => {
     try {
@@ -74,6 +84,32 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
       setRoles([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInvitations = async () => {
+    try {
+      setLoadingInvitations(true);
+      
+      const response = await fetch(`/api/v1/tenants/${tenantId}/invitations`, {
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[TenantUserManagement] Invitations response:', data);
+        // Handle paginated response
+        const invitationsArray = data.data?.data || data.data || [];
+        setInvitations(Array.isArray(invitationsArray) ? invitationsArray : []);
+      } else {
+        console.error('[TenantUserManagement] Failed to load invitations:', response.status);
+        setInvitations([]);
+      }
+    } catch (err) {
+      console.error('[TenantUserManagement] Error loading invitations:', err);
+      setInvitations([]);
+    } finally {
+      setLoadingInvitations(false);
     }
   };
 
@@ -192,9 +228,32 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
       setShowInviteDialog(false);
       setInviteData({ email: '', roleId: '' });
       alert('Invitation sent successfully!');
+      // Reload invitations if on that tab
+      if (activeTab === 'invitations') {
+        loadInvitations();
+      }
     } catch (err) {
       console.error('Error sending invitation:', err);
       alert('Failed to send invitation: ' + err.message);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId) => {
+    try {
+      const response = await fetch(`/api/v1/invitations/${invitationId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel invitation');
+      }
+
+      // Reload invitations
+      loadInvitations();
+    } catch (err) {
+      console.error('Error canceling invitation:', err);
+      alert('Failed to cancel invitation: ' + err.message);
     }
   };
 
@@ -245,8 +304,8 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Members</CardTitle>
-              <CardDescription>Manage users who have access to this tenant</CardDescription>
+              <CardTitle>Team Management</CardTitle>
+              <CardDescription>Manage members and invitations for this tenant</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button onClick={() => setShowInviteDialog(true)} variant="outline" size="sm" className="gap-2">
@@ -261,94 +320,197 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
           </div>
         </CardHeader>
         <CardContent>
-          {!Array.isArray(members) || members.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">No members yet</p>
-              <p className="text-xs mt-1">Add members or send invitations to get started</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {members.map((member) => {
-                const userInfo = userDetails[member.user_id] || {};
-                const userName = userInfo.name || userInfo.email?.split('@')[0] || 'Unknown User';
-                const userEmail = userInfo.email || 'No email';
-                
-                return (
-                  <div key={member.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex items-start gap-3 flex-1">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0 mt-1">
-                        <Users className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm mb-1">{userName}</div>
-                        
-                        {/* Email with copy button */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
-                          <button
-                            onClick={() => copyToClipboard(userEmail, `email-${member.user_id}`)}
-                            className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
-                            title="Copy email"
-                          >
-                            {copiedText === `email-${member.user_id}` ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3 text-muted-foreground" />
-                            )}
-                          </button>
-                        </div>
-                        
-                        {/* User ID with copy button */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground font-mono truncate">
-                            ID: {member.user_id}
-                          </span>
-                          <button
-                            onClick={() => copyToClipboard(member.user_id, `id-${member.user_id}`)}
-                            className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
-                            title="Copy user ID"
-                          >
-                            {copiedText === `id-${member.user_id}` ? (
-                              <Check className="h-3 w-3 text-green-600" />
-                            ) : (
-                              <Copy className="h-3 w-3 text-muted-foreground" />
-                            )}
-                          </button>
-                        </div>
-                        
-                        {/* Role badge */}
-                        <div className="mt-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {member.role?.name || 'Member'}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
+          <Tabs defaultValue="members" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full max-w-[400px] grid-cols-2">
+              <TabsTrigger value="members">
+                <Users className="h-4 w-4 mr-2" />
+                Members
+              </TabsTrigger>
+              <TabsTrigger value="invitations">
+                <Mail className="h-4 w-4 mr-2" />
+                Invitations
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="members" className="mt-4">
+              {!Array.isArray(members) || members.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No members yet</p>
+                  <p className="text-xs mt-1">Add members or send invitations to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {members.map((member) => {
+                    const userInfo = userDetails[member.user_id] || {};
+                    const userName = userInfo.name || userInfo.email?.split('@')[0] || 'Unknown User';
+                    const userEmail = userInfo.email || 'No email';
                     
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                      {Array.isArray(member.roles) && member.roles.map((role) => (
-                        <Badge key={role.id} variant="outline" className="text-xs">
-                          {role.name}
-                        </Badge>
-                      ))}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm(`Remove ${userName} (${userEmail}) from this tenant?`)) {
-                            handleRemoveMember(member.user_id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                    return (
+                      <div key={member.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 flex-shrink-0 mt-1">
+                            <Users className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm mb-1">{userName}</div>
+                            
+                            {/* Email with copy button */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs text-muted-foreground truncate">{userEmail}</span>
+                              <button
+                                onClick={() => copyToClipboard(userEmail, `email-${member.user_id}`)}
+                                className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                                title="Copy email"
+                              >
+                                {copiedText === `email-${member.user_id}` ? (
+                                  <Check className="h-3 w-3 text-green-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </button>
+                            </div>
+                            
+                            {/* User ID with copy button */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground font-mono truncate">
+                                ID: {member.user_id}
+                              </span>
+                              <button
+                                onClick={() => copyToClipboard(member.user_id, `id-${member.user_id}`)}
+                                className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                                title="Copy user ID"
+                              >
+                                {copiedText === `id-${member.user_id}` ? (
+                                  <Check className="h-3 w-3 text-green-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </button>
+                            </div>
+                            
+                            {/* Role badge */}
+                            <div className="mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {member.role?.name || 'Member'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                          {Array.isArray(member.roles) && member.roles.map((role) => (
+                            <Badge key={role.id} variant="outline" className="text-xs">
+                              {role.name}
+                            </Badge>
+                          ))}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm(`Remove ${userName} (${userEmail}) from this tenant?`)) {
+                                handleRemoveMember(member.user_id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="invitations" className="mt-4">
+              {loadingInvitations ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+                </div>
+              ) : !Array.isArray(invitations) || invitations.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Mail className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">No pending invitations</p>
+                  <p className="text-xs mt-1">Send invitations to add new members</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {invitations.map((invitation) => (
+                    <div key={invitation.id} className="flex items-start justify-between p-4 border rounded-lg hover:bg-muted/50">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 flex-shrink-0 mt-1">
+                          <Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm mb-1">{invitation.email}</div>
+                          
+                          {/* Status and Role */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge 
+                              variant={invitation.status === 'pending' ? 'default' : 'secondary'} 
+                              className="text-xs"
+                            >
+                              {invitation.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                              {invitation.status}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {invitation.role?.name || 'Member'}
+                            </Badge>
+                          </div>
+                          
+                          {/* Invitation link with copy button */}
+                          {invitation.token && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground font-mono truncate">
+                                Link: ...{invitation.token.slice(-8)}
+                              </span>
+                              <button
+                                onClick={() => {
+                                  const inviteLink = `${window.location.origin}/accept-invitation/${invitation.token}`;
+                                  copyToClipboard(inviteLink, `invite-${invitation.id}`);
+                                }}
+                                className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"
+                                title="Copy invitation link"
+                              >
+                                {copiedText === `invite-${invitation.id}` ? (
+                                  <Check className="h-3 w-3 text-green-600" />
+                                ) : (
+                                  <Copy className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </button>
+                            </div>
+                          )}
+                          
+                          {/* Created date */}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Sent: {new Date(invitation.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                        {invitation.status === 'pending' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm(`Cancel invitation for ${invitation.email}?`)) {
+                                handleCancelInvitation(invitation.id);
+                              }
+                            }}
+                            title="Cancel invitation"
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
