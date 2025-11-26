@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import Session from 'supertokens-auth-react/recipe/session';
+import appConfig from '../../config';
 
 export function AcceptInvitationPage() {
   const { token: tokenParam } = useParams();
@@ -101,8 +102,10 @@ export function AcceptInvitationPage() {
 
   const handleAcceptInvitation = async () => {
     if (!isAuthenticated) {
-      // Redirect to sign in with return URL (including query params)
-      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      // Redirect to sign in with return URL
+      // Get the current path relative to the basename
+      const currentPath = window.location.pathname + window.location.search;
+      const returnUrl = encodeURIComponent(currentPath);
       navigate(`/auth/signin?redirectToPath=${returnUrl}`);
       return;
     }
@@ -306,10 +309,11 @@ export function AcceptInvitationPage() {
                     </div>
                   </div>
                   <Button 
-                    onClick={() => {
-                      // Log out and redirect to sign in
-                      Session.signOut();
-                      navigate('/auth/signin');
+                    onClick={async () => {
+                      // Log out and redirect to sign in with proper basePath
+                      await Session.signOut();
+                      const authUrl = appConfig.basename ? `${appConfig.basename}/auth/signin` : '/auth/signin';
+                      window.location.href = authUrl;
                     }}
                     variant="outline"
                     className="w-full gap-2"

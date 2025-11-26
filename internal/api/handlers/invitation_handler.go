@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/ysaakpr/rex/internal/api/middleware"
+	"github.com/ysaakpr/rex/internal/config"
 	"github.com/ysaakpr/rex/internal/models"
 	"github.com/ysaakpr/rex/internal/pkg/response"
 	"github.com/ysaakpr/rex/internal/services"
@@ -11,12 +14,26 @@ import (
 
 type InvitationHandler struct {
 	invitationService services.InvitationService
+	cfg               *config.Config
 }
 
-func NewInvitationHandler(invitationService services.InvitationService) *InvitationHandler {
+func NewInvitationHandler(invitationService services.InvitationService, cfg *config.Config) *InvitationHandler {
 	return &InvitationHandler{
 		invitationService: invitationService,
+		cfg:               cfg,
 	}
+}
+
+// buildInvitationURL generates the full invitation URL using the configured base URL
+func (h *InvitationHandler) buildInvitationURL(token string) string {
+	return fmt.Sprintf("%s?token=%s", h.cfg.Invitation.BaseURL, token)
+}
+
+// enrichInvitationResponse adds the invitation URL to the response
+func (h *InvitationHandler) enrichInvitationResponse(inv *models.UserInvitation) *models.InvitationResponse {
+	resp := inv.ToResponse()
+	resp.InvitationURL = h.buildInvitationURL(inv.Token)
+	return resp
 }
 
 // CreateInvitation godoc
@@ -54,7 +71,7 @@ func (h *InvitationHandler) CreateInvitation(c *gin.Context) {
 		return
 	}
 
-	response.Created(c, "Invitation sent successfully", invitation.ToResponse())
+	response.Created(c, "Invitation sent successfully", h.enrichInvitationResponse(invitation))
 }
 
 // ListInvitations godoc
@@ -86,10 +103,10 @@ func (h *InvitationHandler) ListInvitations(c *gin.Context) {
 		return
 	}
 
-	// Convert to response format
+	// Convert to response format with invitation URLs
 	invitationResponses := make([]*models.InvitationResponse, len(invitations))
 	for i, invitation := range invitations {
-		invitationResponses[i] = invitation.ToResponse()
+		invitationResponses[i] = h.enrichInvitationResponse(invitation)
 	}
 
 	pagination.Normalize()
@@ -132,7 +149,7 @@ func (h *InvitationHandler) GetInvitationByToken(c *gin.Context) {
 		return
 	}
 
-	response.OK(c, invitation.ToResponse())
+	response.OK(c, h.enrichInvitationResponse(invitation))
 }
 
 // AcceptInvitation godoc

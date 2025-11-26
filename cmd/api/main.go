@@ -86,7 +86,7 @@ func main() {
 	// Initialize handlers
 	tenantHandler := handlers.NewTenantHandler(tenantService, db)
 	memberHandler := handlers.NewMemberHandler(memberService)
-	invitationHandler := handlers.NewInvitationHandler(invitationService)
+	invitationHandler := handlers.NewInvitationHandler(invitationService, cfg)
 	rbacHandler := handlers.NewRBACHandler(rbacService)
 	platformAdminHandler := handlers.NewPlatformAdminHandler(platformAdminService)
 	userHandler := handlers.NewUserHandler(logger, db)

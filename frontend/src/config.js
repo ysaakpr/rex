@@ -23,12 +23,10 @@ export const BASENAME = normalizedBasePath === '/'
   ? '' 
   : normalizedBasePath.replace(/\/$/, '');
 
-// For SuperTokens: websiteBasePath should not have trailing slash
-// '/' + 'auth' → '/auth'
-// '/demo' + '/auth' → '/demo/auth'
-export const AUTH_PATH = normalizedBasePath === '/' 
-  ? '/auth' 
-  : `${normalizedBasePath.replace(/\/$/, '')}/auth`;
+// For SuperTokens: websiteBasePath should be relative to the basename
+// React Router will automatically add the basename, so always use /auth
+// Example: If basename="/demo", SuperTokens routes at /auth become /demo/auth
+export const AUTH_PATH = '/auth';
 
 // API Configuration
 // For API domain, prefer env variable, but allow dynamic fallback

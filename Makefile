@@ -1,4 +1,4 @@
-.PHONY: help build run stop clean test migrate-up migrate-down migrate-create logs dev
+.PHONY: help build run stop clean test migrate-up migrate-down migrate-create logs dev restart-dev
 
 # Default target
 help:
@@ -6,6 +6,7 @@ help:
 	@echo "  make build            - Build Docker images"
 	@echo "  make run              - Start all services with Docker Compose"
 	@echo "  make dev              - Start services in development mode"
+	@echo "  make restart-dev      - Rebuild and restart dev services (api, worker, frontend, docs)"
 	@echo "  make stop             - Stop all services"
 	@echo "  make clean            - Stop and remove all containers, volumes"
 	@echo "  make logs             - View logs from all services"
@@ -37,6 +38,20 @@ run:
 # Development mode (with logs)
 dev:
 	docker-compose up
+
+# Rebuild and restart only development services (api, worker, frontend, docs)
+restart-dev:
+	@echo "Rebuilding and restarting development services..."
+	docker-compose up -d --build --force-recreate api worker frontend docs
+	@echo ""
+	@echo "✅ Development services restarted!"
+	@echo "   - API:      http://localhost:8080"
+	@echo "   - Frontend: http://localhost/"
+	@echo "   - Docs:     http://localhost/docs"
+	@echo ""
+	@echo "💡 To view logs, run:"
+	@echo "   make logs-api    (API logs)"
+	@echo "   make logs-worker (Worker logs)"
 
 # Stop all services
 stop:

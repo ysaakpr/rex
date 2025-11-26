@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import appConfig from '../../config';
 
 export function TenantUserManagement({ tenantId, onMembersUpdate }) {
   const [members, setMembers] = useState([]);
@@ -467,7 +468,8 @@ export function TenantUserManagement({ tenantId, onMembersUpdate }) {
                               </span>
                               <button
                                 onClick={() => {
-                                  const inviteLink = `${window.location.origin}/accept-invitation/${invitation.token}`;
+                                  // Use invitation URL from backend (single source of truth)
+                                  const inviteLink = invitation.invitation_url || `${window.location.origin}${appConfig.basename || ''}/accept-invite?token=${invitation.token}`;
                                   copyToClipboard(inviteLink, `invite-${invitation.id}`);
                                 }}
                                 className="flex-shrink-0 p-1 hover:bg-muted rounded transition-colors"

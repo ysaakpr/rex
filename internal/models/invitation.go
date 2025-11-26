@@ -43,18 +43,19 @@ type CreateInvitationInput struct {
 }
 
 type InvitationResponse struct {
-	ID         uuid.UUID        `json:"id"`
-	TenantID   uuid.UUID        `json:"tenant_id"`
-	Tenant     *TenantResponse  `json:"tenant,omitempty"`
-	Email      string           `json:"email"`
-	InvitedBy  string           `json:"invited_by"`
-	RoleID     uuid.UUID        `json:"role_id"`
-	Role       *RoleResponse    `json:"role,omitempty"`
-	Token      string           `json:"token,omitempty"` // Include for admin endpoints
-	Status     InvitationStatus `json:"status"`
-	AcceptedAt *time.Time       `json:"accepted_at"`
-	ExpiresAt  time.Time        `json:"expires_at"`
-	CreatedAt  time.Time        `json:"created_at"`
+	ID            uuid.UUID        `json:"id"`
+	TenantID      uuid.UUID        `json:"tenant_id"`
+	Tenant        *TenantResponse  `json:"tenant,omitempty"`
+	Email         string           `json:"email"`
+	InvitedBy     string           `json:"invited_by"`
+	RoleID        uuid.UUID        `json:"role_id"`
+	Role          *RoleResponse    `json:"role,omitempty"`
+	Token         string           `json:"token,omitempty"` // Include for admin endpoints
+	InvitationURL string           `json:"invitation_url,omitempty"` // Full invitation URL
+	Status        InvitationStatus `json:"status"`
+	AcceptedAt    *time.Time       `json:"accepted_at"`
+	ExpiresAt     time.Time        `json:"expires_at"`
+	CreatedAt     time.Time        `json:"created_at"`
 }
 
 func (inv *UserInvitation) ToResponse() *InvitationResponse {

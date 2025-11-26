@@ -5,7 +5,7 @@ import { EmailPasswordPreBuiltUI } from "supertokens-auth-react/recipe/emailpass
 import { ThirdPartyPreBuiltUI } from "supertokens-auth-react/recipe/thirdparty/prebuiltui";
 import { SessionAuth } from "supertokens-auth-react/recipe/session";
 import * as reactRouterDom from "react-router-dom";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import EmailPassword from "supertokens-auth-react/recipe/emailpassword";
 import ThirdParty from "supertokens-auth-react/recipe/thirdparty";
 import Session from "supertokens-auth-react/recipe/session";
@@ -37,8 +37,9 @@ function initializeSuperTokens(authProviderConfig) {
   console.log('[SuperTokens] Initializing with config:', {
     apiDomain: appConfig.apiDomain,
     websiteDomain: appConfig.websiteDomain,
-    authPath: appConfig.authPath,
+    websiteBasePath: appConfig.authPath,
     apiBasePath: appConfig.apiBasePath,
+    basename: appConfig.basename,
   });
   
   const recipeList = [];
@@ -73,7 +74,63 @@ function initializeSuperTokens(authProviderConfig) {
       apiBasePath: appConfig.apiBasePath,
       websiteBasePath: appConfig.authPath
     },
-    recipeList: recipeList
+    recipeList: recipeList,
+    // Global redirect handler - this overrides recipe-level handlers
+    getRedirectionURL: async (context) => {
+      console.log('[SuperTokens Global] getRedirectionURL called', context);
+      
+      if (context.action === "SUCCESS" && context.recipeId === "emailpassword") {
+        // Handle post-login redirect
+        if (context.redirectToPath) {
+          let redirectPath = context.redirectToPath;
+          console.log('[SuperTokens Global] Original redirectToPath:', redirectPath);
+          console.log('[SuperTokens Global] Current basename:', appConfig.basename);
+          
+          // Strip basename from redirectToPath if present
+          if (appConfig.basename) {
+            if (redirectPath.startsWith(appConfig.basename + '/')) {
+              redirectPath = redirectPath.substring(appConfig.basename.length);
+              console.log('[SuperTokens Global] Stripped basename, new path:', redirectPath);
+            } else if (redirectPath === appConfig.basename) {
+              redirectPath = '/';
+            }
+          }
+          
+          console.log('[SuperTokens Global] Final redirect to:', redirectPath);
+          return redirectPath;
+        }
+        
+        // Default redirect after login
+        console.log('[SuperTokens Global] Default redirect to: /tenants');
+        return "/tenants";
+      }
+      
+      if (context.action === "SUCCESS" && context.recipeId === "thirdparty") {
+        // Handle OAuth post-login redirect
+        if (context.redirectToPath) {
+          let redirectPath = context.redirectToPath;
+          console.log('[SuperTokens Global] ThirdParty Original redirectToPath:', redirectPath);
+          
+          if (appConfig.basename) {
+            if (redirectPath.startsWith(appConfig.basename + '/')) {
+              redirectPath = redirectPath.substring(appConfig.basename.length);
+              console.log('[SuperTokens Global] ThirdParty Stripped basename, new path:', redirectPath);
+            } else if (redirectPath === appConfig.basename) {
+              redirectPath = '/';
+            }
+          }
+          
+          console.log('[SuperTokens Global] ThirdParty Final redirect to:', redirectPath);
+          return redirectPath;
+        }
+        
+        console.log('[SuperTokens Global] ThirdParty Default redirect to: /tenants');
+        return "/tenants";
+      }
+      
+      // Return undefined for other actions (let SuperTokens handle them)
+      return undefined;
+    }
   });
   
   superTokensInitialized = true;
@@ -147,6 +204,41 @@ function ProtectedDashboard({ children }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
 
+// Wrapper for SessionAuth that handles basename properly for redirects
+function SessionAuthWrapper({ children }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // This function is called when the user needs to be redirected to auth
+  const redirectToLogin = () => {
+    // Get current path relative to basename (React Router already strips basename)
+    const currentPath = location.pathname + location.search;
+    console.log('[SessionAuthWrapper] Redirecting to login');
+    console.log('[SessionAuthWrapper] Current location:', location);
+    console.log('[SessionAuthWrapper] Current path (relative):', currentPath);
+    
+    // Navigate to auth with the relative path (without basename)
+    // React Router will handle the basename automatically
+    if (currentPath !== '/auth' && currentPath !== '/') {
+      console.log('[SessionAuthWrapper] Redirecting to:', `/auth?redirectToPath=${encodeURIComponent(currentPath)}`);
+      navigate(`/auth?redirectToPath=${encodeURIComponent(currentPath)}`, { replace: true });
+    } else {
+      console.log('[SessionAuthWrapper] Redirecting to: /auth');
+      navigate('/auth', { replace: true });
+    }
+  };
+  
+  return (
+    <SessionAuth
+      requireAuth={true}
+      onSessionExpired={redirectToLogin}
+      redirectToLogin={redirectToLogin}
+    >
+      {children}
+    </SessionAuth>
+  );
+}
+
 function AppContent({ authConfig }) {
   // Determine which auth UIs to show based on config
   const authUIs = authConfig?.providers?.google 
@@ -174,121 +266,121 @@ function AppContent({ authConfig }) {
           <Route
             path="/tenants"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <TenantsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/tenants/create"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <ManagedTenantOnboarding />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/tenants/:id/edit"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <TenantEditPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/tenants/:id"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <TenantDetailsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/permissions"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <PoliciesPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/policies/:id"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <PolicyDetailsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/roles"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <RolesPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/roles/:id"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <RoleDetailsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/users"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <UsersPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/users/:id"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <UserDetailsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           
           <Route
             path="/applications"
             element={
-              <SessionAuth>
+              <SessionAuthWrapper>
                 <ProtectedDashboard>
                   <ApplicationsPage />
                 </ProtectedDashboard>
-              </SessionAuth>
+              </SessionAuthWrapper>
             }
           />
           

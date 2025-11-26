@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 import { signOut } from "supertokens-auth-react/recipe/emailpassword";
 import { useNavigate } from 'react-router-dom';
+import appConfig from '../../config';
 
 export function DashboardLayout({ children }) {
   const navigate = useNavigate();
@@ -53,8 +54,10 @@ export function DashboardLayout({ children }) {
 
   const handleSignOut = async () => {
     await signOut();
-    // Use window.location to force full page reload and go to auth page
-    window.location.href = '/auth';
+    // Redirect to auth page with proper basePath
+    // If basePath is '/demo', this becomes '/demo/auth'
+    const authUrl = appConfig.basename ? `${appConfig.basename}/auth` : '/auth';
+    window.location.href = authUrl;
   };
 
   return (
